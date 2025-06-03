@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Hlasování – Čekání na QR kód</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+      background-color: #f7f7f7;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    #qr-kod {
+      margin: 30px auto;
+    }
+
+    #cislo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #007bff;
+      margin-top: 20px;
+    }
+
+    #vytvorit-btn {
+      margin-top: 40px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #vytvorit-btn:hover {
+      background-color: #218838;
+    }
+
+    #odkaz {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+
+    #odkaz a {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    #odkaz a:hover {
+      text-decoration: underline;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</head>
+<body>
+
+  <h1 id="nadpis">Čekání na QR kód...</h1>
+
+  <div id="odkaz"></div> <!-- Nový prvek pro odkaz -->
+  <div id="qr-kod"></div>
+  <div id="cislo"></div>
+
+
+  <script>
+    function vytvoritHlasovani(code) {
+      const odkazText = `http://192.168.0.135:5000/hlasovani/${code}`;
+
+      document.getElementById('nadpis').textContent = 'Naskenujte QR kód nebo zadejte kód níže:';
+
+      // Zobrazit klikací odkaz
+      const odkazDiv = document.getElementById('odkaz');
+      odkazDiv.innerHTML = `<a href="${odkazText}" target="_blank">${odkazText}</a>`;
+
+      // Generování QR kódu
+      const qrContainer = document.getElementById('qr-kod');
+      qrContainer.innerHTML = ''; // Clear previous QR
+      const canvas = document.createElement('canvas');
+      qrContainer.appendChild(canvas);
+
+      QRCode.toCanvas(canvas, odkazText, { width: 200 }, function (error) {
+        if (error) {
+          console.error('Chyba při generování QR kódu:', error);
+        }
+      });
+
+      document.getElementById('cislo').textContent = code;
+    }
+
+
+
+    const pathParts = window.location.pathname.split('/');
+    const votingCode = pathParts[pathParts.length - 1]; // poslední část cesty
+
+    console.log("Kód hlasování:", votingCode);
+    const apiUrl = `/get_voting/${votingCode}`;
+
+    let pollingInterval = setInterval(() => {
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          console.log(data.started);
+          if (data.started === true) {
+            clearInterval(pollingInterval);
+            vytvoritHlasovani(votingCode);
+          }
+        })
+        .catch(err => {
+          console.error('Chyba při načítání API:', err);
+        });
+    }, 1000); 
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Voting Pool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            background-color: #f9f9f9;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            height: 100vh;
+        }
+
+        .sidebar h3 {
+            margin-top: 0;
+        }
+
+        .sidebar .user {
+            margin-bottom: 20px;
+        }
+
+        .sidebar button {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #555;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            text-align: left;
+        }
+
+        .sidebar button:hover {
+            background-color: #777;
+        }
+
+        .main {
+            flex-grow: 1;
+            padding: 30px;
+        }
+
+        h1, h2 {
+            text-align: center;
+        }
+
+        .form-section {
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .columns {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .column {
+            width: 300px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            background-color: #4CAF50;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .add-btn {
+            margin-top: 10px;
+            padding: 6px 10px;
+            font-size: 14px;
+            border: none;
+            background-color: #2196F3;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            margin-top: 10px;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .submit-btn {
+            margin-top: 30px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #673AB7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #history-section {
+    display: block;
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+#history-section h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: #333;
+}
+
+#history-list {
+    list-style-type: none;
+    padding: 0;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#history-list li {
+    background-color: #f3f3f3;
+    border: 1px solid #ddd;
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+#history-list li:hover {
+    background-color: #e6f7ff;
+}
+
+.hspus {
+    background-color: #514caf;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.hspus:hover {
+    background-color: #6f45a0;
+}
+
+
+.hnespus {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.hnespus:hover {
+    background-color: #45a049;
+}
+
+
+        #voting-form {
+            display: none;
+        }
+
+        #vhlas {
+            background-color: green;
+        }
+
+        .popup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            opacity: 0;
+            animation: slideIn 0.5s forwards;
+            z-index: 9999;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-buttons button:last-child {
+            background-color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h3>NVIAS</h3>
+    <div class="user">Přihlášen jako: <span id="username">...</span></div>
+    <button onclick="toggleHistory()">Historie Hlasování</button>
+    <button id="vhlas" onclick="toggleForm()">Vytvořit hlasování</button>
+</div>
+
+<div class="main">
+    <div id="history-section">
+        <h2>Historie hlasování</h2>
+        <ul id="history-list"></ul>
+    </div>
+
+    <div id="voting-form">
+        <h1>Vytvořit nové hlasování</h1>
+        <form method="POST" action="javascript:create_team();">
+            <div class="form-section">
+                <label for="pool_title"><strong>Název:</strong></label><br>
+                <input type="text" id="pool_title" name="pool_title" required>
+            </div>
+
+            <div class="columns">
+                <div class="column">
+                    <h2>Týmy</h2>
+                    <div id="teams" class="tag-list"></div>
+                    <button type="button" class="add-btn" onclick="addTag('team')">+ Přidat tým</button>
+                </div>
+                <div class="column">
+                    <h2>Kategorie</h2>
+                    <div id="categories" class="tag-list"></div>
+                    <button type="button" class="add-btn" onclick="addTag('category')">+ Přidat kategorii</button>
+                </div>
+            </div>
+
+            <input type="hidden" name="team_count" id="team_count" value="0">
+            <input type="hidden" name="category_count" id="category_count" value="0">
+
+            <div class="form-section">
+                <button type="submit" class="submit-btn">Vytvořit hlasování</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="inputModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modal-title">Zadejte název</h3>
+        <input type="text" id="modal-input" placeholder="Název">
+        <div class="modal-buttons">
+            <button onclick="confirmModalInput()">Potvrdit</button>
+            <button onclick="closeModal()">Zrušit</button>
+        </div>
+    </div>
+</div>
+
+<div id="popup-container"></div>
+
+<script>
+    let teamCount = 0;
+    let categoryCount = 0;
+    let currentTagType = null;
+
+    function toggleForm() {
+        document.getElementById('voting-form').style.display = 'block';
+        document.getElementById('history-section').style.display = 'none';
+    }
+
+    function toggleHistory() {
+        document.getElementById('voting-form').style.display = 'none';
+        document.getElementById('history-section').style.display = 'block';
+        loadVotings();
+    }
+
+    function create_team() {
+        const teams = [];
+        const categories = [];
+        const vname = document.getElementById("pool_title").value.trim();
+
+        for (let i = 0; i < teamCount; i++) {
+            const input = document.querySelector(`input[name="team_${i}_name"]`);
+            if (input) teams.push(input.value);
+        }
+
+        for (let i = 0; i < categoryCount; i++) {
+            const input = document.querySelector(`input[name="category_${i}_name"]`);
+            if (input) categories.push(input.value);
+        }
+
+        const payload = {
+            name: vname,
+            teams: teams.map(c => ({ [c]: categories.map(a => ({ [a]: 0 })) })),
+            questions: categories,
+        };
+
+        fetch('/create_voting', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            showPopup("Hlasování bylo úspěšně vytvořeno.");
+            toggleHistory();
+        });
+    }
+
+    function addTag(type) {
+        currentTagType = type;
+        document.getElementById("modal-title").textContent =
+            `Zadejte ${type === 'team' ? 'název týmu' : 'název kategorie'}`;
+        document.getElementById("modal-input").value = "";
+        document.getElementById("inputModal").style.display = "block";
+    }
+
+    function confirmModalInput() {
+        const name = document.getElementById("modal-input").value.trim();
+        if (!name) {
+            showPopup("Zadejte platný název.");
+            return;
+        }
+
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.innerText = name;
+
+        const form = document.forms[0];
+        const input = document.createElement('input');
+        input.type = 'hidden';
+
+        if (currentTagType === 'team') {
+            document.getElementById('teams').appendChild(tag);
+            input.name = `team_${teamCount}_name`;
+            input.value = name;
+            teamCount++;
+            document.getElementById('team_count').value = teamCount;
+        } else {
+            document.getElementById('categories').appendChild(tag);
+            input.name = `category_${categoryCount}_name`;
+            input.value = name;
+            categoryCount++;
+            document.getElementById('category_count').value = categoryCount;
+        }
+
+        form.appendChild(input);
+        showPopup(`${currentTagType === 'team' ? 'Tým' : 'Kategorie'} "${name}" přidán.`);
+        closeModal();
+    }
+
+    function closeModal() {
+        document.getElementById("inputModal").style.display = "none";
+    }
+
+    function showPopup(message) {
+        const popup = document.createElement("div");
+        popup.className = "popup";
+        popup.textContent = message;
+        document.getElementById("popup-container").appendChild(popup);
+        setTimeout(() => popup.remove(), 3000);
+    }
+
+    function runVoting(id) {
+        window.open(`./presentation/${id}`, '_blank').focus();
+
+    }
+
+    function loadVotings() {
+        fetch('/get_votings')
+            .then(res => res.json())
+            .then(data => {
+                const votingsArray = Object.values(data); // This creates an array of the values (votings)
+                ogdata = data
+                // Sort the array by the 'created_at' field in descending order
+                votingsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                data = votingsArray
+                const list = document.getElementById('history-list');
+                list.innerHTML = '';
+                for (const [ids, voting] of Object.entries(data)) {
+                    id = voting.unique_id
+                    const li = document.createElement('li');
+                    console.log(voting.teams)
+                    team_keys = voting.teams.map(obj => Object.keys(obj)[0])
+                    li.textContent = `${voting.name} | Týmy: ${team_keys.join(', ')}`;
+                    if (!voting.started) {
+                        const btn = document.createElement('button');
+                        btn.textContent = "Spustit hlasování";
+                        btn.id = id
+                        btn.className = "hnespus"
+                        btn.onclick = () => {
+                            ide = btn.id
+                            console.log(ide)
+                            fetch(`/start_voting/${ide}`, { method: 'POST' })
+                                .then(() => showPopup(`Hlasování ${id} spuštěno!`));
+                                window.location.reload();
+
+                        };
+                        li.appendChild(btn);
+                    }
+                    else {
+                        console.log(id)
+                        const btn = document.createElement('button');
+                        btn.textContent = "Hlasování spuštěno";
+                        btn.className = "hspus"
+                        btn.id = id
+                        btn.onclick = () => {
+                            ide = btn.id
+                            runVoting(ide);
+
+                        };
+                        li.appendChild(btn);
+                    }
+                    list.appendChild(li);
+                    
+                }
+            });
+    }
+
+    function getCookie(cname) {
+        const name = cname + "=";
+        const ca = document.cookie.split(';');
+        for (let c of ca) {
+            while (c.charAt(0) == ' ') c = c.substring(1);
+            if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+        }
+        return "";
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        let username = getCookie("login") || "guest";
+        document.getElementById('username').textContent = username;
+        loadVotings();
+    });
+</script>
+</body>
+</html>
