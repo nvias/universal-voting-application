@@ -3,326 +3,879 @@
 <head>
   <meta charset="UTF-8">
   <title>NVIAS Hlasování</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: 'Fira Sans', sans-serif;
+    :root {
+      --primary-color: #2563eb;
+      --primary-dark: #1d4ed8;
+      --secondary-color: #f59e0b;
+      --success-color: #10b981;
+      --error-color: #ef4444;
+      --warning-color: #f59e0b;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    }
+
+    * {
       margin: 0;
-      background-color: #14213d;
-      color: white;
+      padding: 0;
+      box-sizing: border-box;
     }
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background-color: #e5e5e5;
-      padding: 10px 20px;
-      color: white;
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: var(--gray-800);
+      line-height: 1.6;
     }
 
-    .logo-wrapper {
-      flex: 1;
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 24px;
+      text-align: center;
     }
 
     .logo {
-      height: 40px;
+      height: 48px;
+      margin-bottom: 16px;
     }
 
-    nav {
-      flex: 8;
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--gray-600);
+      font-size: 1.1rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: var(--shadow-xl);
+      margin-bottom: 24px;
+    }
+
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--gray-200);
+      border-top: 4px solid var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-message, .success-message {
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .error-message {
+      background-color: #fef2f2;
+      color: var(--error-color);
+      border: 1px solid #fecaca;
+    }
+
+    .success-message {
+      background-color: #f0fdf4;
+      color: var(--success-color);
+      border: 1px solid #bbf7d0;
+    }
+
+    .team-selection {
       text-align: center;
     }
 
-    .nav-link {
-      color: black;
-      text-decoration: none;
-      margin: 0 15px;
+    .team-selection h2 {
+      font-size: 1.5rem;
       font-weight: 600;
-      font-size: 18px;
-      padding-bottom: 4px;
-      border-bottom: 2px solid transparent;
-      transition: border-color 0.3s;
+      margin-bottom: 8px;
+      color: var(--gray-800);
     }
 
-    .nav-link:hover,
-    .nav-link.active {
-      border-bottom: 2px solid #fb5607;
+    .team-selection p {
+      color: var(--gray-600);
+      margin-bottom: 32px;
     }
 
-    main {
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .team-card {
+      background: var(--gray-50);
+      border: 2px solid var(--gray-200);
+      border-radius: 12px;
       padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
     }
 
-    .team-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      margin-bottom: 40px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    .team-card:hover {
+      border-color: var(--primary-color);
+      background: #eff6ff;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .team-card.selected {
+      border-color: var(--primary-color);
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .team-card i {
+      font-size: 2rem;
+      color: var(--primary-color);
+      margin-bottom: 12px;
+    }
+
+    .team-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    .voting-form {
+      display: none;
+    }
+
+    .voting-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .voting-header h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 8px;
+    }
+
+    .selected-team-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-color);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .progress-bar {
+      background: var(--gray-200);
       border-radius: 8px;
+      height: 8px;
+      margin-bottom: 24px;
       overflow: hidden;
     }
 
-    .team-table caption {
-      text-align: left;
-      font-size: 20px;
+    .progress-fill {
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .question-block {
+      background: var(--gray-50);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid var(--gray-200);
+    }
+
+    .question-title {
+      font-size: 1.25rem;
       font-weight: 600;
-      background: #fb8500;
+      color: var(--gray-800);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .question-number {
+      background: var(--primary-color);
       color: white;
-      padding: 10px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 0.875rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .team-table th, .team-table td {
-      padding: 12px;
-      text-align: center;
-      border: 1px solid #ddd;
+    .team-voting-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
     }
 
-    input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      appearance: none;
-      background-color: #e0e0e0;
-      border-radius: 4px;
-      display: inline-block;
-      position: relative;
+    .team-voting-option {
+      background: white;
+      border: 2px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.3s ease;
     }
 
-    input[type="checkbox"]:checked {
-      background-color: #f47c21;
+    .team-voting-option:hover {
+      border-color: var(--primary-color);
+      box-shadow: var(--shadow);
     }
 
-    .submit-wrapper {
-      text-align: center;
-      margin-top: 30px;
+    .team-voting-option.voted {
+      border-color: var(--success-color);
+      background: #f0fdf4;
     }
 
-    button {
-      background-color: #f47c21;
-      color: white;
-      padding: 12px 30px;
-      border: none;
-      font-size: 16px;
+    .team-name {
+      font-weight: 600;
+      color: var(--gray-800);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vote-check {
+      color: var(--success-color);
+      font-size: 1.2rem;
+    }
+
+    .option-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .option-btn {
+      padding: 8px 16px;
+      border: 2px solid var(--gray-300);
+      background: white;
       border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: all 0.2s ease;
+      font-weight: 500;
+      font-size: 0.875rem;
+      min-width: 48px;
+      text-align: center;
     }
 
-    button:hover {
-      background-color: #f47c21;
+    .option-btn:hover {
+      border-color: var(--primary-color);
+      background: #eff6ff;
+    }
+
+    .option-btn.selected {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+    }
+
+    .rating-scale {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .rating-btn {
+      width: 40px;
+      height: 40px;
+      border: 2px solid var(--gray-300);
+      background: white;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .rating-btn:hover {
+      border-color: var(--primary-color);
+      background: #eff6ff;
+    }
+
+    .rating-btn.selected {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+    }
+
+    .submit-section {
+      text-align: center;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--gray-200);
+    }
+
+    .submit-btn {
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: white;
+      padding: 16px 32px;
+      border: none;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-lg);
+      min-width: 200px;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .submit-btn:disabled {
+      background: var(--gray-400);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: var(--shadow);
+    }
+
+    .back-btn {
+      background: var(--gray-500);
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-right: 16px;
+    }
+
+    .back-btn:hover {
+      background: var(--gray-600);
+    }
+
+    .nase-firmy-voting {
+      background: linear-gradient(135deg, #fef3c7, #fbbf24);
+      border: 2px solid var(--secondary-color);
+      color: var(--gray-800);
+    }
+
+    .nase-firmy-voting .team-voting-option {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .nase-firmy-info {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid var(--secondary-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .nase-firmy-info h3 {
+      color: var(--secondary-color);
+      font-weight: 600;
+      margin-bottom: 8px;
     }
 
     @media (max-width: 768px) {
-      header {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
+      .container {
+        padding: 12px;
       }
 
-      .logo-wrapper {
-        margin-bottom: 10px;
+      .header {
+        padding: 20px;
       }
 
-      nav {
-        flex: unset;
+      .header h1 {
+        font-size: 1.5rem;
       }
 
-      .nav-link {
-        display: inline-block;
-        margin: 0 8px;
-        font-size: 16px;
+      .card {
+        padding: 20px;
       }
 
-      .team-table caption {
-        font-size: 18px;
-        text-align: center;
+      .team-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
       }
 
-      button {
-        width: 90%;
+      .team-voting-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .option-buttons {
+        justify-content: center;
+      }
+
+      .rating-scale {
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .submit-btn {
+        width: 100%;
         max-width: 300px;
-        font-size: 15px;
       }
-    }
-
-    @media (max-width: 600px) {
-      .team-table {
-        display: block;
-        overflow-x: auto;
-        white-space: nowrap;
-      }
-
-      .team-table th,
-      .team-table td {
-        padding: 8px;
-        font-size: 14px;
-      }
-
-      .nav-link {
-        font-size: 14px;
-      }
-
-      input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-      }
-    }
-
-    #team-selection {
-      text-align: center;
-      margin-top: 40px;
-      padding: 20px;
-    }
-
-    .team-boxes {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 20px;
-    }
-
-    .team-box {
-      padding: 20px 30px;
-      border: 2px solid #fb8500;
-      border-radius: 10px;
-      cursor: pointer;
-      background-color: #fefae0;
-      color: #14213d;
-      font-weight: bold;
-      transition: background-color 0.3s, transform 0.2s;
-    }
-
-    .team-box:hover {
-      background-color: #fbbf24;
-      transform: scale(1.05);
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo-wrapper">
+  <div class="container">
+    <div class="header">
       <img src="https://framerusercontent.com/images/GVcZ28MwwaOnLOQe1Q1meZMF6ck.png" alt="Nvias Logo" class="logo">
+      <h1 id="voting-title">Hlasování</h1>
+      <p id="voting-description">Načítám informace o hlasování...</p>
     </div>
-    <nav>
-      <a href="#index" class="nav-link active">Hlasování</a>
-    </nav>
-  </header>
 
-  <!-- Výběr týmu -->
-  <section id="team-selection">
-    <h2>Vyber tým, za který hodnotíš:</h2>
-    <div class="team-boxes"></div>
-  </section>
-
-  <main id="hlasovani" style="display: none;">
-    <div id="teams-container"></div>
-    <div class="submit-wrapper">
-      <button onclick="odeslatHlasovani()">Odeslat</button>
+    <!-- Loading State -->
+    <div id="loading-container" class="card">
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Načítám hlasování...</p>
+      </div>
     </div>
-  </main>
+
+    <!-- Error State -->
+    <div id="error-container" class="card" style="display: none;">
+      <div class="error-message" id="error-message"></div>
+    </div>
+
+    <!-- Success State -->
+    <div id="success-container" class="card" style="display: none;">
+      <div class="success-message">
+        <i class="fas fa-check-circle"></i>
+        Vaše hlasování bylo úspěšně odesláno! Děkujeme za účast.
+      </div>
+    </div>
+
+    <!-- Team Selection -->
+    <div id="team-selection" class="card" style="display: none;">
+      <div class="team-selection">
+        <h2>Vyberte váš tým</h2>
+        <p>Nejprve si vyberte tým, za který hlasujete</p>
+        <div id="team-selection-grid" class="team-grid"></div>
+      </div>
+    </div>
+
+    <!-- Voting Form -->
+    <div id="voting-form" class="card voting-form">
+      <div class="voting-header">
+        <div class="selected-team-info">
+          <i class="fas fa-users"></i>
+          <span>Hlasujete za: <strong id="selected-team-name"></strong></span>
+        </div>
+        <h2 id="form-voting-title"></h2>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p id="progress-text">Dokončeno: 0%</p>
+      </div>
+
+      <div id="nase-firmy-info" class="nase-firmy-info" style="display: none;">
+        <h3><i class="fas fa-trophy"></i> Soutěž Naše firmy</h3>
+        <p>V každé kategorii vyberte jeden tým, který si podle vás zaslouží ocenění. Nemůžete hlasovat pro svůj vlastní tým.</p>
+      </div>
+
+      <div id="questions-container"></div>
+
+      <div class="submit-section">
+        <button class="back-btn" onclick="goBackToTeamSelection()">
+          <i class="fas fa-arrow-left"></i> Změnit tým
+        </button>
+        <button class="submit-btn" id="submit-btn" onclick="submitVoting()" disabled>
+          <i class="fas fa-paper-plane"></i> Odeslat hlasování
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const hlasovaniSection = document.getElementById('hlasovani');
-    const teamSelection = document.getElementById('team-selection');
-    const container = document.getElementById('teams-container');
-    const teamBoxesContainer = document.querySelector('.team-boxes');
-
-    let criteria = [];
-    let teamNames = [];
+    let votingData = null;
+    let selectedTeam = null;
+    let userVotes = {};
+    let isNaseFirmy = false;
 
     function getVotingIdFromUrl() {
       const parts = window.location.pathname.split('/');
       return parts[parts.length - 1];
     }
 
-    async function fetchVotingData() {
-      const votingId = getVotingIdFromUrl();
-      const response = await fetch(`/get_voting/${votingId}`);
-      return await response.json();
+    function showError(message) {
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-container').style.display = 'block';
+      document.getElementById('loading-container').style.display = 'none';
+      document.getElementById('team-selection').style.display = 'none';
+      document.getElementById('voting-form').style.display = 'none';
     }
 
-    function createTeamBox(selectedTeam) {
-      teamSelection.style.display = 'none';
-      hlasovaniSection.style.display = 'block';
-
-      const table = document.createElement('table');
-      table.className = 'team-table';
-
-      const caption = document.createElement('caption');
-      caption.textContent = `Hodnocení za tým: ${selectedTeam}`;
-      table.appendChild(caption);
-
-      const thead = document.createElement('thead');
-      const headRow = document.createElement('tr');
-      headRow.innerHTML = `<th></th>` + teamNames.map(name => `<th>${name}</th>`).join('');
-      thead.appendChild(headRow);
-      table.appendChild(thead);
-
-      const tbody = document.createElement('tbody');
-
-      criteria.forEach((criterion, rowIndex) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${criterion}</td>`;
-
-        const checkboxGroup = [];
-
-        teamNames.forEach((teamName, colIndex) => {
-          const td = document.createElement('td');
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.dataset.row = rowIndex;
-          checkbox.dataset.col = colIndex;
-          checkbox.dataset.votedFor = teamName;
-          td.appendChild(checkbox);
-          row.appendChild(td);
-          checkboxGroup.push(checkbox);
-        });
-
-        checkboxGroup.forEach((checkbox) => {
-          checkbox.addEventListener('click', () => {
-            checkboxGroup.forEach(cb => cb.checked = false);
-            checkbox.checked = true;
-          });
-        });
-
-        tbody.appendChild(row);
-      });
-
-      table.appendChild(tbody);
-      container.innerHTML = '';
-      container.appendChild(table);
+    function showSuccess() {
+      document.getElementById('success-container').style.display = 'block';
+      document.getElementById('voting-form').style.display = 'none';
+      document.getElementById('error-container').style.display = 'none';
     }
 
-    async function initVoting() {
+    async function loadVotingData() {
       try {
-        const voting = await fetchVotingData();
-        criteria = voting.questions;
-        teamNames = voting.teams.map(teamObj => Object.keys(teamObj)[0]);
+        const votingId = getVotingIdFromUrl();
+        const response = await fetch(`/api/voting-data/${votingId}`);
+        
+        if (!response.ok) {
+          throw new Error('Hlasování nebylo nalezeno');
+        }
+        
+        votingData = await response.json();
+        
+        if (!votingData.session.started || votingData.session.ended) {
+          throw new Error('Hlasování není aktivní');
+        }
 
-        teamNames.forEach(teamName => {
-          const div = document.createElement('div');
-          div.className = 'team-box';
-          div.dataset.team = teamName;
-          div.textContent = teamName;
-          teamBoxesContainer.appendChild(div);
-
-          div.addEventListener('click', () => {
-            createTeamBox(teamName);
-          });
-        });
+        // Check if this is "Naše firmy" template
+        isNaseFirmy = votingData.questions.some(q => q.question_type === 'team_selection');
+        
+        document.getElementById('voting-title').textContent = votingData.session.name;
+        document.getElementById('voting-description').textContent = 
+          votingData.session.started && !votingData.session.ended ? 'Hlasování je aktivní' : 'Hlasování není aktivní';
+        
+        showTeamSelection();
+        
       } catch (error) {
-        console.error('Chyba při načítání dat:', error);
-        alert('Nepodařilo se načíst data hlasování.');
+        console.error('Error loading voting data:', error);
+        showError(error.message || 'Nepodařilo se načíst data hlasování');
       }
     }
 
-    function odeslatHlasovani() {
-      alert("Hlasování bylo odesláno. Děkujeme!");
+    function showTeamSelection() {
+      document.getElementById('loading-container').style.display = 'none';
+      document.getElementById('team-selection').style.display = 'block';
+      
+      const teamGrid = document.getElementById('team-selection-grid');
+      teamGrid.innerHTML = '';
+      
+      votingData.teams.forEach(team => {
+        const teamCard = document.createElement('div');
+        teamCard.className = 'team-card';
+        teamCard.innerHTML = `
+          <i class="fas fa-users"></i>
+          <h3>${team.name}</h3>
+        `;
+        
+        teamCard.onclick = () => selectTeam(team);
+        teamGrid.appendChild(teamCard);
+      });
     }
 
-    window.addEventListener('DOMContentLoaded', initVoting);
+    function selectTeam(team) {
+      selectedTeam = team;
+      
+      // Visual feedback
+      document.querySelectorAll('.team-card').forEach(card => card.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+      
+      // Small delay for visual feedback
+      setTimeout(() => {
+        showVotingForm();
+      }, 300);
+    }
+
+    function showVotingForm() {
+      document.getElementById('team-selection').style.display = 'none';
+      document.getElementById('voting-form').style.display = 'block';
+      
+      document.getElementById('selected-team-name').textContent = selectedTeam.name;
+      document.getElementById('form-voting-title').textContent = votingData.session.name;
+      
+      if (isNaseFirmy) {
+        document.getElementById('nase-firmy-info').style.display = 'block';
+        document.getElementById('voting-form').classList.add('nase-firmy-voting');
+      }
+      
+      renderQuestions();
+      updateProgress();
+    }
+
+    function renderQuestions() {
+      const questionsContainer = document.getElementById('questions-container');
+      questionsContainer.innerHTML = '';
+      
+      votingData.questions.forEach((question, index) => {
+        const questionBlock = document.createElement('div');
+        questionBlock.className = 'question-block';
+        
+        if (isNaseFirmy) {
+          questionBlock.classList.add('nase-firmy-question');
+        }
+        
+        questionBlock.innerHTML = `
+          <div class="question-title">
+            <span class="question-number">${index + 1}</span>
+            ${question.text}
+          </div>
+          <div class="team-voting-grid" id="teams-${question.id}"></div>
+        `;
+        
+        questionsContainer.appendChild(questionBlock);
+        
+        const teamsGrid = document.getElementById(`teams-${question.id}`);
+        
+        // For "Naše firmy" template, show teams as options
+        if (question.question_type === 'team_selection') {
+          votingData.teams.forEach(team => {
+            // Don't allow voting for own team in "Naše firmy"
+            if (isNaseFirmy && team.id === selectedTeam.id) {
+              return;
+            }
+            
+            const teamOption = document.createElement('div');
+            teamOption.className = 'team-voting-option';
+            teamOption.innerHTML = `
+              <div class="team-name">
+                <span>${team.name}</span>
+                <i class="fas fa-check vote-check" style="display: none;"></i>
+              </div>
+              <div class="option-buttons">
+                <button class="option-btn" onclick="selectTeamOption(${question.id}, ${team.id}, '${team.name}', this)">
+                  <i class="fas fa-vote-yea"></i> Hlasovat
+                </button>
+              </div>
+            `;
+            teamsGrid.appendChild(teamOption);
+          });
+        } else {
+          // Regular voting for all teams
+          votingData.teams.forEach(team => {
+            const teamOption = document.createElement('div');
+            teamOption.className = 'team-voting-option';
+            teamOption.innerHTML = `
+              <div class="team-name">
+                <span>${team.name}</span>
+                <i class="fas fa-check vote-check" style="display: none;"></i>
+              </div>
+              <div class="option-container" id="options-${question.id}-${team.id}"></div>
+            `;
+            teamsGrid.appendChild(teamOption);
+            
+            const optionsContainer = document.getElementById(`options-${question.id}-${team.id}`);
+            
+            if (question.question_type === 'rating') {
+              optionsContainer.className = 'rating-scale';
+              question.options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'rating-btn';
+                btn.textContent = option;
+                btn.onclick = () => selectOption(question.id, team.id, option, btn);
+                optionsContainer.appendChild(btn);
+              });
+            } else {
+              optionsContainer.className = 'option-buttons';
+              question.options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.onclick = () => selectOption(question.id, team.id, option, btn);
+                optionsContainer.appendChild(btn);
+              });
+            }
+          });
+        }
+      });
+    }
+
+    function selectTeamOption(questionId, teamId, teamName, buttonElement) {
+      if (!userVotes[questionId]) {
+        userVotes[questionId] = {};
+      }
+      
+      // For team selection, only one team can be selected per question
+      userVotes[questionId] = {
+        [teamId]: {
+          option_selected: teamName,
+          numeric_value: null
+        }
+      };
+      
+      // Update UI
+      const questionContainer = buttonElement.closest('.question-block');
+      questionContainer.querySelectorAll('.team-voting-option').forEach(option => {
+        option.classList.remove('voted');
+        option.querySelector('.vote-check').style.display = 'none';
+        option.querySelector('.option-btn').innerHTML = '<i class="fas fa-vote-yea"></i> Hlasovat';
+      });
+      
+      const teamOption = buttonElement.closest('.team-voting-option');
+      teamOption.classList.add('voted');
+      teamOption.querySelector('.vote-check').style.display = 'inline';
+      buttonElement.innerHTML = '<i class="fas fa-check"></i> Zvoleno';
+      
+      updateProgress();
+    }
+
+    function selectOption(questionId, teamId, option, buttonElement) {
+      if (!userVotes[questionId]) {
+        userVotes[questionId] = {};
+      }
+      
+      userVotes[questionId][teamId] = {
+        option_selected: option,
+        numeric_value: isNaN(option) ? null : parseFloat(option)
+      };
+      
+      // Update button states
+      const optionsContainer = buttonElement.parentElement;
+      optionsContainer.querySelectorAll('.option-btn, .rating-btn').forEach(btn => {
+        btn.classList.remove('selected');
+      });
+      buttonElement.classList.add('selected');
+      
+      // Show check mark for team
+      const teamOption = buttonElement.closest('.team-voting-option');
+      teamOption.classList.add('voted');
+      teamOption.querySelector('.vote-check').style.display = 'inline';
+      
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const totalQuestions = votingData.questions.length;
+      const answeredQuestions = Object.keys(userVotes).length;
+      
+      let totalAnswers = 0;
+      let maxPossibleAnswers;
+      
+      if (isNaseFirmy) {
+        // For "Naše firmy", each question should have exactly one answer
+        maxPossibleAnswers = totalQuestions;
+        totalAnswers = answeredQuestions;
+      } else {
+        // For regular voting, count all team votes
+        maxPossibleAnswers = totalQuestions * votingData.teams.length;
+        Object.values(userVotes).forEach(questionVotes => {
+          totalAnswers += Object.keys(questionVotes).length;
+        });
+      }
+      
+      const percentage = maxPossibleAnswers > 0 ? Math.round((totalAnswers / maxPossibleAnswers) * 100) : 0;
+      
+      document.getElementById('progress-fill').style.width = `${percentage}%`;
+      document.getElementById('progress-text').textContent = `Dokončeno: ${percentage}%`;
+      
+      // Enable submit button based on completion
+      const submitBtn = document.getElementById('submit-btn');
+      if (isNaseFirmy) {
+        // For "Naše firmy", all questions must be answered
+        submitBtn.disabled = answeredQuestions < totalQuestions;
+      } else {
+        // For regular voting, at least one vote per question
+        const hasVotedForAllQuestions = votingData.questions.every(q => 
+          userVotes[q.id] && Object.keys(userVotes[q.id]).length > 0
+        );
+        submitBtn.disabled = !hasVotedForAllQuestions;
+      }
+    }
+
+    function goBackToTeamSelection() {
+      userVotes = {};
+      selectedTeam = null;
+      document.getElementById('voting-form').style.display = 'none';
+      showTeamSelection();
+    }
+
+    async function submitVoting() {
+      if (!selectedTeam) {
+        showError('Musíte si vybrat tým');
+        return;
+      }
+
+      try {
+        const votingId = getVotingIdFromUrl();
+        const votes = [];
+        
+        Object.entries(userVotes).forEach(([questionId, teamVotes]) => {
+          Object.entries(teamVotes).forEach(([teamId, voteData]) => {
+            votes.push({
+              question_id: parseInt(questionId),
+              team_id: parseInt(teamId),
+              voter_team_id: selectedTeam.id,
+              option_selected: voteData.option_selected,
+              numeric_value: voteData.numeric_value
+            });
+          });
+        });
+        
+        const response = await fetch(`/api/submit-vote/${votingId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ votes })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Chyba při odesílání hlasování');
+        }
+        
+        showSuccess();
+        
+      } catch (error) {
+        console.error('Error submitting votes:', error);
+        showError(error.message || 'Nepodařilo se odeslat hlasování');
+      }
+    }
+
+    // Initialize voting when page loads
+    document.addEventListener('DOMContentLoaded', loadVotingData);
   </script>
 </body>
 </html>

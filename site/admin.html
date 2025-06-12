@@ -457,23 +457,45 @@
                             ide = btn.id
                             console.log(ide)
                             fetch(`/start_voting/${ide}`, { method: 'POST' })
-                                .then(() => showPopup(`Hlasování ${id} spuštěno!`));
-                                window.location.reload();
-
+                                .then(() => {
+                                    showPopup(`Hlasování ${id} spuštěno!`);
+                                    setTimeout(() => window.location.reload(), 1000);
+                                });
                         };
                         li.appendChild(btn);
                     }
-                    else {
-                        console.log(id)
-                        const btn = document.createElement('button');
-                        btn.textContent = "Hlasování spuštěno";
-                        btn.className = "hspus"
-                        btn.id = id
-                        btn.onclick = () => {
-                            ide = btn.id
-                            runVoting(ide);
-
+                    else if (!voting.ended) {
+                        const runBtn = document.createElement('button');
+                        runBtn.textContent = "QR Kód";
+                        runBtn.className = "hspus"
+                        runBtn.id = id + "_run"
+                        runBtn.onclick = () => {
+                            runVoting(id);
                         };
+                        li.appendChild(runBtn);
+
+                        const stopBtn = document.createElement('button');
+                        stopBtn.textContent = "Zastavit";
+                        stopBtn.className = "hstop"
+                        stopBtn.style.backgroundColor = "#f44336";
+                        stopBtn.style.marginLeft = "10px";
+                        stopBtn.onclick = () => {
+                            if (confirm(`Opravdu chcete zastavit hlasování "${voting.name}"?`)) {
+                                fetch(`/stop_voting/${id}`, { method: 'POST' })
+                                    .then(() => {
+                                        showPopup(`Hlasování ${id} zastaveno!`);
+                                        setTimeout(() => window.location.reload(), 1000);
+                                    });
+                            }
+                        };
+                        li.appendChild(stopBtn);
+                    }
+                    else {
+                        const btn = document.createElement('button');
+                        btn.textContent = "Ukončeno";
+                        btn.className = "hended"
+                        btn.style.backgroundColor = "#888";
+                        btn.disabled = true;
                         li.appendChild(btn);
                     }
                     list.appendChild(li);
