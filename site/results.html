@@ -192,16 +192,37 @@
 
         function generateResultsTable() {
             const container = document.getElementById('results-table');
-            let html = '<table class="results-table"><thead><tr><th>Otázka</th><th>Tým</th><th>Výsledek</th><th>Hlasů</th></tr></thead><tbody>';
+            let html = '<table class="results-table"><thead><tr><th>Otázka</th><th>Tým</th><th>Hlasů</th><th>Hlasovali</th></tr></thead><tbody>';
 
             currentResults.results.forEach(question => {
-                Object.entries(question.teams).forEach(([teamName, teamData]) => {
-                    const result = question.question_type === 'rating' 
-                        ? `⭐ ${teamData.average_rating || 0}`
-                        : Object.entries(teamData.option_counts || {}).map(([o, c]) => `${o}: ${c}`).join(', ') || 'Žádné hlasy';
-                    
-                    html += `<tr><td>${question.question_text}</td><td>${teamName}</td><td>${result}</td><td>${teamData.vote_count || 0}</td></tr>`;
-                });
+                if (question.voting_details && Object.keys(question.voting_details).length > 0) {
+                    // Show detailed voting information
+                    Object.entries(question.voting_details).forEach(([teamName, details]) => {
+                        const voters = details.voters || [];
+                        const votersList = voters.map(v => v.voter_team).filter(v => v !== "Unknown").join(', ') || 'Neznámí voliči';
+                        
+                        html += `<tr>
+                            <td>${question.question_text}</td>
+                            <td><strong>${teamName}</strong></td>
+                            <td><span class="vote-count">${details.total_votes}</span></td>
+                            <td><em class="voters-list">${votersList}</em></td>
+                        </tr>`;
+                    });
+                } else {
+                    // Fallback to old format
+                    Object.entries(question.teams).forEach(([teamName, teamData]) => {
+                        const result = question.question_type === 'rating' 
+                            ? `⭐ ${teamData.average_rating || 0}`
+                            : Object.entries(teamData.option_counts || {}).map(([o, c]) => `${o}: ${c}`).join(', ') || 'Žádné hlasy';
+                        
+                        html += `<tr>
+                            <td>${question.question_text}</td>
+                            <td>${teamName}</td>
+                            <td>${teamData.vote_count || 0}</td>
+                            <td>${result}</td>
+                        </tr>`;
+                    });
+                }
             });
 
             html += '</tbody></table>';
@@ -210,14 +231,24 @@
 
         function exportToCSV() {
             if (!currentResults) return;
-            let csv = 'Otazka,Tym,Vysledek,Pocet_hlasu\n';
+            let csv = 'Otazka,Tym,Pocet_hlasu,Hlasovali\n';
+            
             currentResults.results.forEach(question => {
-                Object.entries(question.teams).forEach(([teamName, teamData]) => {
-                    const result = question.question_type === 'rating' ? (teamData.average_rating || 0) : 
-                        Object.entries(teamData.option_counts || {}).map(([o, c]) => `${o}:${c}`).join(';');
-                    csv += `"${question.question_text}","${teamName}","${result}","${teamData.vote_count || 0}"\n`;
-                });
+                if (question.voting_details && Object.keys(question.voting_details).length > 0) {
+                    Object.entries(question.voting_details).forEach(([teamName, details]) => {
+                        const voters = details.voters || [];
+                        const votersList = voters.map(v => v.voter_team).filter(v => v !== "Unknown").join(';') || 'Neznami';
+                        csv += `"${question.question_text}","${teamName}","${details.total_votes}","${votersList}"\n`;
+                    });
+                } else {
+                    Object.entries(question.teams).forEach(([teamName, teamData]) => {
+                        const result = question.question_type === 'rating' ? (teamData.average_rating || 0) : 
+                            Object.entries(teamData.option_counts || {}).map(([o, c]) => `${o}:${c}`).join(';');
+                        csv += `"${question.question_text}","${teamName}","${teamData.vote_count || 0}","${result}"\n`;
+                    });
+                }
             });
+            
             downloadFile(csv, `vysledky_${currentResults.session_id}.csv`, 'text/csv');
         }
 
@@ -285,6 +316,18 @@
         
         .results-table tr:hover {
             background: var(--primary-light);
+        }
+        
+        .vote-count {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+        
+        .voters-list {
+            color: var(--gray-600);
+            font-style: normal;
+            font-size: 0.9rem;
         }
     </style>
 </body>

@@ -274,6 +274,105 @@ def get_voting_statistics(voting_id):
         'ended': session.ended
     })
 
+# API endpoint to get detailed voting results
+@app.route('/api/v1/voting/<voting_id>/results')
+def get_detailed_voting_results(voting_id):
+    """Get detailed voting results for results page"""
+    session = VotingSession.query.filter_by(unique_id=voting_id).first()
+    if not session:
+        return jsonify({'error': 'Voting session not found'}), 404
+    
+    # Build results data
+    results = []
+    
+    for question in session.questions:
+        question_results = {
+            'question_id': question.id,
+            'question_text': question.text,
+            'question_type': question.question_type,
+            'teams': {},
+            'voting_details': []  # New: detailed voting information
+        }
+        
+        # Get all votes for this question with voter team information
+        votes = db.session.query(Vote).join(
+            Team, Vote.team_id == Team.id
+        ).filter(Vote.question_id == question.id).all()
+        
+        # Process votes to show who voted for whom
+        voting_details = {}
+        for vote in votes:
+            # Get teams involved
+            voted_team = Team.query.get(vote.team_id)
+            voter_team = Team.query.get(vote.voter_team_id) if vote.voter_team_id else None
+            
+            voted_name = voted_team.name if voted_team else "Unknown"
+            voter_name = voter_team.name if voter_team else "Unknown"
+            
+            if voted_name not in voting_details:
+                voting_details[voted_name] = {
+                    'total_votes': 0,
+                    'voters': []
+                }
+            
+            voting_details[voted_name]['total_votes'] += 1
+            voting_details[voted_name]['voters'].append({
+                'voter_team': voter_name,
+                'option_selected': vote.option_selected,
+                'numeric_value': vote.numeric_value
+            })
+        
+        question_results['voting_details'] = voting_details
+        
+        # Build team summary (existing functionality)
+        for team in session.teams:
+            team_votes = Vote.query.filter_by(
+                question_id=question.id,
+                team_id=team.id
+            ).all()
+            
+            if question.question_type == 'rating':
+                # Calculate average rating
+                ratings = [v.numeric_value for v in team_votes if v.numeric_value is not None]
+                avg_rating = sum(ratings) / len(ratings) if ratings else 0
+                
+                question_results['teams'][team.name] = {
+                    'vote_count': len(team_votes),
+                    'average_rating': round(avg_rating, 2),
+                    'option_counts': {}
+                }
+            elif question.question_type == 'team_selection':
+                # For Naše firmy - count votes received by this team
+                question_results['teams'][team.name] = {
+                    'vote_count': len(team_votes),
+                    'average_rating': 0,
+                    'option_counts': {team.name: len(team_votes)} if team_votes else {}
+                }
+            else:
+                # Count votes by option
+                option_counts = {}
+                for vote in team_votes:
+                    option = vote.option_selected or 'no_option'
+                    option_counts[option] = option_counts.get(option, 0) + 1
+                
+                question_results['teams'][team.name] = {
+                    'vote_count': len(team_votes),
+                    'average_rating': 0,
+                    'option_counts': option_counts
+                }
+        
+        results.append(question_results)
+    
+    # Count total voters
+    total_voters = Voter.query.filter_by(session_id=session.id).count()
+    
+    return jsonify({
+        'session_id': voting_id,
+        'session_name': session.name,
+        'total_voters': total_voters,
+        'results': results
+    })
+
 # API endpoint to submit votes from frontend
 @app.route('/api/submit-vote/<voteid>', methods=['POST'])
 def submit_vote_frontend(voteid):

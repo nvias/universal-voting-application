@@ -358,6 +358,11 @@
         function displayResults(data) {
             const container = document.getElementById('results-content');
             
+            if (!data || !data.results) {
+                container.innerHTML = '<div class="message message-error">Nepodařilo se načíst výsledky hlasování</div>';
+                return;
+            }
+            
             let html = `
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -370,6 +375,11 @@
                         <div class="stat-value">${data.results.length}</div>
                         <div class="stat-label">Otázek</div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-vote-yea"></i></div>
+                        <div class="stat-value">${getTotalVotes(data.results)}</div>
+                        <div class="stat-label">Celkem hlasů</div>
+                    </div>
                 </div>
             `;
 
@@ -380,31 +390,87 @@
                         <div class="results-summary">
                 `;
 
-                Object.entries(question.teams).forEach(([teamName, teamData]) => {
-                    if (question.question_type === 'rating') {
+                // Show voting details if available (who voted for whom)
+                if (question.voting_details && Object.keys(question.voting_details).length > 0) {
+                    Object.entries(question.voting_details).forEach(([teamName, details]) => {
+                        const voters = details.voters || [];
+                        const votersList = voters.map(v => v.voter_team).filter(v => v !== "Unknown").join(', ') || 'Neznámí voliči';
+                        
                         html += `
-                            <div class="result-item">
-                                <strong>${teamName}:</strong> 
-                                ${teamData.average_rating} ⭐ (${teamData.vote_count} hlasů)
+                            <div class="result-item ${details.total_votes > 0 ? 'has-votes' : ''}">
+                                <div class="result-team">
+                                    <strong>${teamName}:</strong> 
+                                    <span class="result-value">${details.total_votes} hlasů</span>
+                                </div>
+                                <div class="result-voters">
+                                    <i class="fas fa-arrow-left"></i> Hlasovali: <em>${votersList}</em>
+                                </div>
+                                <div class="result-bar">
+                                    <div class="result-fill" style="width: ${getResultPercentage(details.total_votes, question.voting_details)}%"></div>
+                                </div>
                             </div>
                         `;
-                    } else {
-                        const optionText = Object.entries(teamData.option_counts || {})
-                            .map(([option, count]) => `${option}: ${count}`)
-                            .join(', ');
+                    });
+                } else {
+                    // Fallback to old format if voting details not available
+                    Object.entries(question.teams).forEach(([teamName, teamData]) => {
+                        let resultText = '';
+                        
+                        if (question.question_type === 'rating') {
+                            resultText = `${teamData.average_rating} ⭐ (${teamData.vote_count} hlasů)`;
+                        } else if (question.question_type === 'team_selection') {
+                            resultText = `${teamData.vote_count} hlasů`;
+                        } else {
+                            const optionText = Object.entries(teamData.option_counts || {})
+                                .map(([option, count]) => `${option}: ${count}`)
+                                .join(', ') || 'Žádné hlasy';
+                            resultText = `${teamData.vote_count} hlasů (${optionText})`;
+                        }
+                        
                         html += `
-                            <div class="result-item">
-                                <strong>${teamName}:</strong> 
-                                ${teamData.vote_count} hlasů (${optionText})
+                            <div class="result-item ${teamData.vote_count > 0 ? 'has-votes' : ''}">
+                                <div class="result-team">
+                                    <strong>${teamName}:</strong> 
+                                    <span class="result-value">${resultText}</span>
+                                </div>
+                                <div class="result-bar">
+                                    <div class="result-fill" style="width: ${getResultPercentage(teamData.vote_count, question.teams)}%"></div>
+                                </div>
                             </div>
                         `;
-                    }
-                });
+                    });
+                }
 
                 html += `</div></div>`;
             });
 
             container.innerHTML = html;
+        }
+        
+        function getTotalVotes(results) {
+            let total = 0;
+            results.forEach(question => {
+                if (question.voting_details) {
+                    Object.values(question.voting_details).forEach(details => {
+                        total += details.total_votes || 0;
+                    });
+                } else {
+                    Object.values(question.teams).forEach(team => {
+                        total += team.vote_count || 0;
+                    });
+                }
+            });
+            return total;
+        }
+        
+        function getResultPercentage(voteCount, allData) {
+            let maxVotes = 0;
+            if (allData && typeof allData === 'object') {
+                maxVotes = Math.max(...Object.values(allData).map(item => 
+                    item.total_votes || item.vote_count || 0
+                ));
+            }
+            return maxVotes > 0 ? (voteCount / maxVotes) * 100 : 0;
         }
 
         function getCookie(cname) {
@@ -477,6 +543,55 @@
             background: var(--gray-50);
             border-radius: var(--radius-lg);
             border-left: 4px solid var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-item.has-votes {
+            border-left-color: var(--success-color);
+            background: var(--success-light);
+        }
+        
+        .result-team {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-value {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+        
+        .result-voters {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0;
+            border-top: 1px solid var(--gray-200);
+        }
+        
+        .result-voters i {
+            color: var(--primary-color);
+            margin-right: 0.5rem;
+        }
+        
+        .result-voters em {
+            color: var(--gray-700);
+            font-weight: 500;
+        }
+        
+        .result-bar {
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .result-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--primary-color));
+            transition: width 0.3s ease;
         }
     </style>
 </body>
