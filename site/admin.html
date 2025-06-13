@@ -2,523 +2,482 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Create Voting Pool</title>
+    <title>NVIAS Admin - Správa hlasování</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="sidebar">
+        <h3><i class="fas fa-vote-yea"></i> NVIAS</h3>
+        <div class="user-info">
+            <i class="fas fa-user"></i>
+            <span>Přihlášen jako: <strong id="username">...</strong></span>
+        </div>
+        <ul class="sidebar-nav">
+            <li class="nav-item">
+                <a href="#" class="nav-link active" onclick="toggleHistory()">
+                    <i class="fas fa-history"></i>
+                    Historie hlasování
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" onclick="toggleForm()">
+                    <i class="fas fa-plus"></i>
+                    Vytvořit hlasování
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" onclick="toggleResults()">
+                    <i class="fas fa-chart-bar"></i>
+                    Výsledky
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <img src="https://framerusercontent.com/images/GVcZ28MwwaOnLOQe1Q1meZMF6ck.png" alt="Nvias Logo" class="logo">
+            <h1>Administrace hlasování</h1>
+            <p>Správa a monitorování hlasovacích sesí</p>
+        </div>
+
+        <!-- Historie hlasování -->
+        <div id="history-section" class="card">
+            <div class="card-header">
+                <h2 class="card-title">Historie hlasování</h2>
+                <p class="card-subtitle">Přehled všech vytvořených hlasovacích sesí</p>
+            </div>
+            <div id="history-list"></div>
+        </div>
+
+        <!-- Vytvoření nového hlasování -->
+        <div id="voting-form" class="card" style="display: none;">
+            <div class="card-header">
+                <h2 class="card-title">Vytvořit nové hlasování</h2>
+                <p class="card-subtitle">Nastavte parametry pro novou hlasovací seši</p>
+            </div>
+            
+            <form method="POST" action="javascript:create_team();">
+                <div class="form-group">
+                    <label class="form-label" for="pool_title">Název hlasování</label>
+                    <input type="text" id="pool_title" name="pool_title" class="form-input" required>
+                </div>
+
+                <div class="grid grid-cols-2">
+                    <div class="card-sm">
+                        <h3 class="card-title">Týmy</h3>
+                        <div id="teams" class="tag-list"></div>
+                        <button type="button" class="btn btn-secondary" onclick="addTag('team')">
+                            <i class="fas fa-plus"></i> Přidat tým
+                        </button>
+                    </div>
+                    <div class="card-sm">
+                        <h3 class="card-title">Kategorie</h3>
+                        <div id="categories" class="tag-list"></div>
+                        <button type="button" class="btn btn-secondary" onclick="addTag('category')">
+                            <i class="fas fa-plus"></i> Přidat kategorii
+                        </button>
+                    </div>
+                </div>
+
+                <input type="hidden" name="team_count" id="team_count" value="0">
+                <input type="hidden" name="category_count" id="category_count" value="0">
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Vytvořit hlasování
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Výsledky -->
+        <div id="results-section" class="card" style="display: none;">
+            <div class="card-header">
+                <h2 class="card-title">Výsledky hlasování</h2>
+                <p class="card-subtitle">Analýza a vizualizace výsledků</p>
+            </div>
+            <div id="results-content">
+                <p>Vyberte hlasování z historie pro zobrazení výsledků.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pro zadávání -->
+    <div id="inputModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Zadejte název</h3>
+            <input type="text" id="modal-input" class="form-input" placeholder="Název">
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="confirmModalInput()">Potvrdit</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Zrušit</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let teamCount = 0;
+        let categoryCount = 0;
+        let currentTagType = null;
+
+        function toggleForm() {
+            document.getElementById('voting-form').style.display = 'block';
+            document.getElementById('history-section').style.display = 'none';
+            document.getElementById('results-section').style.display = 'none';
+            updateNavActive('form');
+        }
+
+        function toggleHistory() {
+            document.getElementById('voting-form').style.display = 'none';
+            document.getElementById('history-section').style.display = 'block';
+            document.getElementById('results-section').style.display = 'none';
+            updateNavActive('history');
+            loadVotings();
+        }
+
+        function toggleResults() {
+            document.getElementById('voting-form').style.display = 'none';
+            document.getElementById('history-section').style.display = 'none';
+            document.getElementById('results-section').style.display = 'block';
+            updateNavActive('results');
+        }
+
+        function updateNavActive(section) {
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            const activeMap = {
+                'history': 0,
+                'form': 1,
+                'results': 2
+            };
+            document.querySelectorAll('.nav-link')[activeMap[section]]?.classList.add('active');
+        }
+
+        function create_team() {
+            const teams = [];
+            const categories = [];
+            const vname = document.getElementById("pool_title").value.trim();
+
+            for (let i = 0; i < teamCount; i++) {
+                const input = document.querySelector(`input[name="team_${i}_name"]`);
+                if (input) teams.push(input.value);
+            }
+
+            for (let i = 0; i < categoryCount; i++) {
+                const input = document.querySelector(`input[name="category_${i}_name"]`);
+                if (input) categories.push(input.value);
+            }
+
+            const payload = {
+                name: vname,
+                teams: teams.map(c => ({ [c]: categories.map(a => ({ [a]: 0 })) })),
+                questions: categories,
+            };
+
+            fetch('/create_voting', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                showNotification("Hlasování bylo úspěšně vytvořeno.", 'success');
+                toggleHistory();
+            });
+        }
+
+        function addTag(type) {
+            currentTagType = type;
+            document.getElementById("modal-title").textContent =
+                `Zadejte ${type === 'team' ? 'název týmu' : 'název kategorie'}`;
+            document.getElementById("modal-input").value = "";
+            document.getElementById("inputModal").style.display = "block";
+        }
+
+        function confirmModalInput() {
+            const name = document.getElementById("modal-input").value.trim();
+            if (!name) {
+                showNotification("Zadejte platný název.", 'error');
+                return;
+            }
+
+            const tag = document.createElement("span");
+            tag.className = "tag";
+            tag.innerHTML = `${name} <i class="fas fa-times" onclick="removeTag(this)"></i>`;
+
+            const form = document.forms[0];
+            const input = document.createElement('input');
+            input.type = 'hidden';
+
+            if (currentTagType === 'team') {
+                document.getElementById('teams').appendChild(tag);
+                input.name = `team_${teamCount}_name`;
+                input.value = name;
+                teamCount++;
+                document.getElementById('team_count').value = teamCount;
+            } else {
+                document.getElementById('categories').appendChild(tag);
+                input.name = `category_${categoryCount}_name`;
+                input.value = name;
+                categoryCount++;
+                document.getElementById('category_count').value = categoryCount;
+            }
+
+            form.appendChild(input);
+            showNotification(`${currentTagType === 'team' ? 'Tým' : 'Kategorie'} "${name}" přidán.`, 'success');
+            closeModal();
+        }
+
+        function removeTag(element) {
+            element.parentElement.remove();
+        }
+
+        function closeModal() {
+            document.getElementById("inputModal").style.display = "none";
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement("div");
+            notification.className = `message message-${type}`;
+            notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}"></i> ${message}`;
+            
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        function loadVotings() {
+            fetch('/get_votings')
+                .then(res => res.json())
+                .then(data => {
+                    const votingsArray = Object.values(data);
+                    votingsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    
+                    const list = document.getElementById('history-list');
+                    list.innerHTML = '';
+                    
+                    for (const voting of votingsArray) {
+                        const item = createVotingItem(voting);
+                        list.appendChild(item);
+                    }
+                });
+        }
+
+        function createVotingItem(voting) {
+            const item = document.createElement('div');
+            item.className = 'voting-item';
+            item.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem;
+                border: 1px solid var(--gray-200);
+                border-radius: var(--radius-lg);
+                margin-bottom: 0.75rem;
+                background: var(--gray-50);
+            `;
+            
+            const teamNames = voting.teams.map(obj => Object.keys(obj)[0]).join(', ');
+            
+            item.innerHTML = `
+                <div>
+                    <h4 style="font-weight: 600; margin-bottom: 0.25rem;">${voting.name}</h4>
+                    <p style="color: var(--gray-600); font-size: 0.875rem;">Týmy: ${teamNames}</p>
+                </div>
+                <div class="btn-group">
+                    ${getVotingButtons(voting)}
+                </div>
+            `;
+            
+            return item;
+        }
+
+        function getVotingButtons(voting) {
+            if (!voting.started) {
+                return `<button class="btn btn-success" onclick="startVoting('${voting.unique_id}')">
+                    <i class="fas fa-play"></i> Spustit
+                </button>`;
+            } else if (!voting.ended) {
+                return `
+                    <button class="btn btn-primary" onclick="showQR('${voting.unique_id}')">
+                        <i class="fas fa-qrcode"></i> QR Kód
+                    </button>
+                    <button class="btn btn-danger" onclick="stopVoting('${voting.unique_id}')">
+                        <i class="fas fa-stop"></i> Zastavit
+                    </button>
+                `;
+            } else {
+                return `
+                    <button class="btn btn-secondary" onclick="showResults('${voting.unique_id}')">
+                        <i class="fas fa-chart-bar"></i> Výsledky
+                    </button>
+                `;
+            }
+        }
+
+        function startVoting(id) {
+            fetch(`/start_voting/${id}`, { method: 'POST' })
+                .then(() => {
+                    showNotification(`Hlasování ${id} spuštěno!`, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                });
+        }
+
+        function stopVoting(id) {
+            if (confirm(`Opravdu chcete zastavit hlasování?`)) {
+                fetch(`/stop_voting/${id}`, { method: 'POST' })
+                    .then(() => {
+                        showNotification(`Hlasování ${id} zastaveno!`, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    });
+            }
+        }
+
+        function showQR(id) {
+            window.open(`./presentation/${id}`, '_blank');
+        }
+
+        function showResults(id) {
+            toggleResults();
+            loadResultsData(id);
+        }
+
+        function loadResultsData(votingId) {
+            fetch(`/api/v1/voting/${votingId}/results`)
+                .then(res => res.json())
+                .then(data => {
+                    displayResults(data);
+                })
+                .catch(err => {
+                    console.error('Results loading error:', err);
+                    document.getElementById('results-content').innerHTML = 
+                        '<div class="message message-error">Chyba při načítání výsledků. Zkuste to znovu.</div>';
+                });
+        }
+
+        function displayResults(data) {
+            const container = document.getElementById('results-content');
+            
+            let html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-value">${data.total_voters || 0}</div>
+                        <div class="stat-label">Celkem voličů</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-question"></i></div>
+                        <div class="stat-value">${data.results.length}</div>
+                        <div class="stat-label">Otázek</div>
+                    </div>
+                </div>
+            `;
+
+            data.results.forEach((question, index) => {
+                html += `
+                    <div class="chart-container">
+                        <h3 class="chart-title">${question.question_text}</h3>
+                        <div class="results-summary">
+                `;
+
+                Object.entries(question.teams).forEach(([teamName, teamData]) => {
+                    if (question.question_type === 'rating') {
+                        html += `
+                            <div class="result-item">
+                                <strong>${teamName}:</strong> 
+                                ${teamData.average_rating} ⭐ (${teamData.vote_count} hlasů)
+                            </div>
+                        `;
+                    } else {
+                        const optionText = Object.entries(teamData.option_counts || {})
+                            .map(([option, count]) => `${option}: ${count}`)
+                            .join(', ');
+                        html += `
+                            <div class="result-item">
+                                <strong>${teamName}:</strong> 
+                                ${teamData.vote_count} hlasů (${optionText})
+                            </div>
+                        `;
+                    }
+                });
+
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function getCookie(cname) {
+            const name = cname + "=";
+            const ca = document.cookie.split(';');
+            for (let c of ca) {
+                while (c.charAt(0) == ' ') c = c.substring(1);
+                if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+            }
+            return "";
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let username = getCookie("login") || "admin";
+            document.getElementById('username').textContent = username;
+            loadVotings();
+        });
+    </script>
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            display: flex;
-            background-color: #f9f9f9;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: #333;
-            color: white;
-            padding: 20px;
-            height: 100vh;
-        }
-
-        .sidebar h3 {
-            margin-top: 0;
-        }
-
-        .sidebar .user {
-            margin-bottom: 20px;
-        }
-
-        .sidebar button {
-            display: block;
-            width: 100%;
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #555;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-            text-align: left;
-        }
-
-        .sidebar button:hover {
-            background-color: #777;
-        }
-
-        .main {
-            flex-grow: 1;
-            padding: 30px;
-        }
-
-        h1, h2 {
-            text-align: center;
-        }
-
-        .form-section {
-            margin: 20px auto;
-            max-width: 600px;
-            text-align: center;
-        }
-
-        .columns {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin-top: 30px;
-        }
-
-        .column {
-            width: 300px;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-        }
-
-        .tag-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .tag {
-            background-color: #4CAF50;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 15px;
-            font-size: 14px;
-        }
-
-        .add-btn {
-            margin-top: 10px;
-            padding: 6px 10px;
-            font-size: 14px;
-            border: none;
-            background-color: #2196F3;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        input[type="text"] {
-            padding: 5px;
-            margin-top: 10px;
-            width: 100%;
-            font-size: 14px;
-        }
-
-        .submit-btn {
-            margin-top: 30px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #673AB7;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        #history-section {
-    display: block;
-    margin-top: 30px;
-    padding: 20px;
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-#history-section h2 {
-    margin-bottom: 20px;
-    font-size: 24px;
-    color: #333;
-}
-
-#history-list {
-    list-style-type: none;
-    padding: 0;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-#history-list li {
-    background-color: #f3f3f3;
-    border: 1px solid #ddd;
-    padding: 15px 20px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    text-align: left;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 16px;
-    transition: background-color 0.2s ease-in-out;
-}
-
-#history-list li:hover {
-    background-color: #e6f7ff;
-}
-
-.hspus {
-    background-color: #514caf;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
-
-.hspus:hover {
-    background-color: #6f45a0;
-}
-
-
-.hnespus {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
-
-.hnespus:hover {
-    background-color: #45a049;
-}
-
-
-        #voting-form {
-            display: none;
-        }
-
-        #vhlas {
-            background-color: green;
-        }
-
-        .popup {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #4CAF50;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            opacity: 0;
-            animation: slideIn 0.5s forwards;
-            z-index: 9999;
-        }
-
-        @keyframes slideIn {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-        }
-
         .modal {
             display: none;
             position: fixed;
-            z-index: 2000;
+            z-index: 1000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
             background-color: rgba(0,0,0,0.5);
         }
-
+        
         .modal-content {
-            background-color: #fff;
+            background-color: white;
             margin: 15% auto;
-            padding: 20px;
+            padding: 2rem;
+            border-radius: var(--radius-xl);
             width: 90%;
             max-width: 400px;
-            border-radius: 10px;
             text-align: center;
         }
-
-        .modal-buttons {
-            margin-top: 20px;
+        
+        .tag-list {
             display: flex;
-            justify-content: center;
-            gap: 20px;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            min-height: 2rem;
         }
-
-        .modal-buttons button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #4CAF50;
+        
+        .tag {
+            background: var(--primary-color);
             color: white;
-            border-radius: 5px;
-            cursor: pointer;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-
-        .modal-buttons button:last-child {
-            background-color: #aaa;
+        
+        .tag i { cursor: pointer; }
+        
+        .results-summary {
+            display: grid;
+            gap: 0.75rem;
+        }
+        
+        .result-item {
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            border-left: 4px solid var(--primary-color);
         }
     </style>
-</head>
-<body>
-
-<div class="sidebar">
-    <h3>NVIAS</h3>
-    <div class="user">Přihlášen jako: <span id="username">...</span></div>
-    <button onclick="toggleHistory()">Historie Hlasování</button>
-    <button id="vhlas" onclick="toggleForm()">Vytvořit hlasování</button>
-</div>
-
-<div class="main">
-    <div id="history-section">
-        <h2>Historie hlasování</h2>
-        <ul id="history-list"></ul>
-    </div>
-
-    <div id="voting-form">
-        <h1>Vytvořit nové hlasování</h1>
-        <form method="POST" action="javascript:create_team();">
-            <div class="form-section">
-                <label for="pool_title"><strong>Název:</strong></label><br>
-                <input type="text" id="pool_title" name="pool_title" required>
-            </div>
-
-            <div class="columns">
-                <div class="column">
-                    <h2>Týmy</h2>
-                    <div id="teams" class="tag-list"></div>
-                    <button type="button" class="add-btn" onclick="addTag('team')">+ Přidat tým</button>
-                </div>
-                <div class="column">
-                    <h2>Kategorie</h2>
-                    <div id="categories" class="tag-list"></div>
-                    <button type="button" class="add-btn" onclick="addTag('category')">+ Přidat kategorii</button>
-                </div>
-            </div>
-
-            <input type="hidden" name="team_count" id="team_count" value="0">
-            <input type="hidden" name="category_count" id="category_count" value="0">
-
-            <div class="form-section">
-                <button type="submit" class="submit-btn">Vytvořit hlasování</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="inputModal" class="modal">
-    <div class="modal-content">
-        <h3 id="modal-title">Zadejte název</h3>
-        <input type="text" id="modal-input" placeholder="Název">
-        <div class="modal-buttons">
-            <button onclick="confirmModalInput()">Potvrdit</button>
-            <button onclick="closeModal()">Zrušit</button>
-        </div>
-    </div>
-</div>
-
-<div id="popup-container"></div>
-
-<script>
-    let teamCount = 0;
-    let categoryCount = 0;
-    let currentTagType = null;
-
-    function toggleForm() {
-        document.getElementById('voting-form').style.display = 'block';
-        document.getElementById('history-section').style.display = 'none';
-    }
-
-    function toggleHistory() {
-        document.getElementById('voting-form').style.display = 'none';
-        document.getElementById('history-section').style.display = 'block';
-        loadVotings();
-    }
-
-    function create_team() {
-        const teams = [];
-        const categories = [];
-        const vname = document.getElementById("pool_title").value.trim();
-
-        for (let i = 0; i < teamCount; i++) {
-            const input = document.querySelector(`input[name="team_${i}_name"]`);
-            if (input) teams.push(input.value);
-        }
-
-        for (let i = 0; i < categoryCount; i++) {
-            const input = document.querySelector(`input[name="category_${i}_name"]`);
-            if (input) categories.push(input.value);
-        }
-
-        const payload = {
-            name: vname,
-            teams: teams.map(c => ({ [c]: categories.map(a => ({ [a]: 0 })) })),
-            questions: categories,
-        };
-
-        fetch('/create_voting', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(() => {
-            showPopup("Hlasování bylo úspěšně vytvořeno.");
-            toggleHistory();
-        });
-    }
-
-    function addTag(type) {
-        currentTagType = type;
-        document.getElementById("modal-title").textContent =
-            `Zadejte ${type === 'team' ? 'název týmu' : 'název kategorie'}`;
-        document.getElementById("modal-input").value = "";
-        document.getElementById("inputModal").style.display = "block";
-    }
-
-    function confirmModalInput() {
-        const name = document.getElementById("modal-input").value.trim();
-        if (!name) {
-            showPopup("Zadejte platný název.");
-            return;
-        }
-
-        const tag = document.createElement("div");
-        tag.className = "tag";
-        tag.innerText = name;
-
-        const form = document.forms[0];
-        const input = document.createElement('input');
-        input.type = 'hidden';
-
-        if (currentTagType === 'team') {
-            document.getElementById('teams').appendChild(tag);
-            input.name = `team_${teamCount}_name`;
-            input.value = name;
-            teamCount++;
-            document.getElementById('team_count').value = teamCount;
-        } else {
-            document.getElementById('categories').appendChild(tag);
-            input.name = `category_${categoryCount}_name`;
-            input.value = name;
-            categoryCount++;
-            document.getElementById('category_count').value = categoryCount;
-        }
-
-        form.appendChild(input);
-        showPopup(`${currentTagType === 'team' ? 'Tým' : 'Kategorie'} "${name}" přidán.`);
-        closeModal();
-    }
-
-    function closeModal() {
-        document.getElementById("inputModal").style.display = "none";
-    }
-
-    function showPopup(message) {
-        const popup = document.createElement("div");
-        popup.className = "popup";
-        popup.textContent = message;
-        document.getElementById("popup-container").appendChild(popup);
-        setTimeout(() => popup.remove(), 3000);
-    }
-
-    function runVoting(id) {
-        window.open(`./presentation/${id}`, '_blank').focus();
-
-    }
-
-    function loadVotings() {
-        fetch('/get_votings')
-            .then(res => res.json())
-            .then(data => {
-                const votingsArray = Object.values(data); // This creates an array of the values (votings)
-                ogdata = data
-                // Sort the array by the 'created_at' field in descending order
-                votingsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                data = votingsArray
-                const list = document.getElementById('history-list');
-                list.innerHTML = '';
-                for (const [ids, voting] of Object.entries(data)) {
-                    id = voting.unique_id
-                    const li = document.createElement('li');
-                    console.log(voting.teams)
-                    team_keys = voting.teams.map(obj => Object.keys(obj)[0])
-                    li.textContent = `${voting.name} | Týmy: ${team_keys.join(', ')}`;
-                    if (!voting.started) {
-                        const btn = document.createElement('button');
-                        btn.textContent = "Spustit hlasování";
-                        btn.id = id
-                        btn.className = "hnespus"
-                        btn.onclick = () => {
-                            ide = btn.id
-                            console.log(ide)
-                            fetch(`/start_voting/${ide}`, { method: 'POST' })
-                                .then(() => {
-                                    showPopup(`Hlasování ${id} spuštěno!`);
-                                    setTimeout(() => window.location.reload(), 1000);
-                                });
-                        };
-                        li.appendChild(btn);
-                    }
-                    else if (!voting.ended) {
-                        const runBtn = document.createElement('button');
-                        runBtn.textContent = "QR Kód";
-                        runBtn.className = "hspus"
-                        runBtn.id = id + "_run"
-                        runBtn.onclick = () => {
-                            runVoting(id);
-                        };
-                        li.appendChild(runBtn);
-
-                        const stopBtn = document.createElement('button');
-                        stopBtn.textContent = "Zastavit";
-                        stopBtn.className = "hstop"
-                        stopBtn.style.backgroundColor = "#f44336";
-                        stopBtn.style.marginLeft = "10px";
-                        stopBtn.onclick = () => {
-                            if (confirm(`Opravdu chcete zastavit hlasování "${voting.name}"?`)) {
-                                fetch(`/stop_voting/${id}`, { method: 'POST' })
-                                    .then(() => {
-                                        showPopup(`Hlasování ${id} zastaveno!`);
-                                        setTimeout(() => window.location.reload(), 1000);
-                                    });
-                            }
-                        };
-                        li.appendChild(stopBtn);
-                    }
-                    else {
-                        const btn = document.createElement('button');
-                        btn.textContent = "Ukončeno";
-                        btn.className = "hended"
-                        btn.style.backgroundColor = "#888";
-                        btn.disabled = true;
-                        li.appendChild(btn);
-                    }
-                    list.appendChild(li);
-                    
-                }
-            });
-    }
-
-    function getCookie(cname) {
-        const name = cname + "=";
-        const ca = document.cookie.split(';');
-        for (let c of ca) {
-            while (c.charAt(0) == ' ') c = c.substring(1);
-            if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
-        }
-        return "";
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        let username = getCookie("login") || "guest";
-        document.getElementById('username').textContent = username;
-        loadVotings();
-    });
-</script>
 </body>
 </html>

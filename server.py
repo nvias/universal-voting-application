@@ -11,7 +11,7 @@ from api_blueprint import api_bp
 
 def create_app(config_name=None):
     """Application factory pattern"""
-    app = Flask(__name__, template_folder="./site")
+    app = Flask(__name__, template_folder="./site", static_folder="./site", static_url_path="/static")
     
     # Configuration
     config_name = config_name or os.environ.get('FLASK_ENV', 'default')
@@ -53,13 +53,20 @@ def create_voting():
         db.session.add(session)
         db.session.flush()
         
+        # Check if this is a "Naše firmy" template based on question names
+        nase_firmy_categories = ['MASKA', 'KOLA', 'SKELET', 'PLAKAT', 'MARKETING']
+        is_nase_firmy = all(q.upper() in nase_firmy_categories for q in data['questions'])
+        
         # Add questions
         for idx, question_text in enumerate(data['questions']):
+            question_type = 'team_selection' if is_nase_firmy else 'rating'
+            options = [] if is_nase_firmy else ['1', '2', '3', '4', '5']
+            
             question = Question(
                 session_id=session.id,
                 text=question_text,
-                question_type='rating',
-                options=['1', '2', '3', '4', '5'],
+                question_type=question_type,
+                options=options,
                 order_index=idx
             )
             db.session.add(question)
@@ -205,6 +212,11 @@ def voting_site_menu(voteid):
     
     return render_template('voting.html')
 
+@app.route('/vysledky')
+def results_page():
+    """Results visualization page"""
+    return render_template('results.html')
+
 # API endpoint to get voting data for frontend
 @app.route('/api/voting-data/<voteid>')
 def get_voting_data_for_frontend(voteid):
@@ -237,6 +249,31 @@ def get_voting_data_for_frontend(voteid):
         'teams': teams
     })
 
+# API endpoint to get voting statistics for QR code page
+@app.route('/api/v1/voting-stats/<voting_id>')
+def get_voting_statistics(voting_id):
+    """Get real-time voting statistics"""
+    session = VotingSession.query.filter_by(unique_id=voting_id).first()
+    if not session:
+        return jsonify({'error': 'Voting session not found'}), 404
+    
+    # Count total votes
+    total_votes = Vote.query.filter_by(session_id=session.id).count()
+    
+    # Count unique voters
+    unique_voters = Voter.query.filter_by(session_id=session.id).count()
+    
+    return jsonify({
+        'session_id': voting_id,
+        'session_name': session.name,
+        'team_count': len(session.teams),
+        'question_count': len(session.questions),
+        'vote_count': total_votes,
+        'voter_count': unique_voters,
+        'started': session.started,
+        'ended': session.ended
+    })
+
 # API endpoint to submit votes from frontend
 @app.route('/api/submit-vote/<voteid>', methods=['POST'])
 def submit_vote_frontend(voteid):
@@ -251,24 +288,20 @@ def submit_vote_frontend(voteid):
     data = request.get_json()
     
     try:
-        # Create voter identifier from IP and user agent
-        voter_identifier = f"{request.remote_addr}_{hash(request.headers.get('User-Agent', ''))}"
+        # Create voter identifier from IP, user agent, and timestamp
+        # This ensures each voting session gets a unique voter entry
+        import time
+        voter_identifier = f"{request.remote_addr}_{hash(request.headers.get('User-Agent', ''))}_session_{int(time.time())}"
         
-        # Get or create voter
-        voter = Voter.query.filter_by(
-            session_id=session.id, 
-            identifier=voter_identifier
-        ).first()
-        
-        if not voter:
-            voter = Voter(
-                session_id=session.id,
-                identifier=voter_identifier,
-                ip_address=request.remote_addr,
-                user_agent=request.headers.get('User-Agent')
-            )
-            db.session.add(voter)
-            db.session.flush()
+        # Create new voter for this voting session
+        voter = Voter(
+            session_id=session.id,
+            identifier=voter_identifier,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        db.session.add(voter)
+        db.session.flush()
         
         # Process votes for each question
         votes_submitted = 0
@@ -276,15 +309,6 @@ def submit_vote_frontend(voteid):
             question_id = vote_data.get('question_id')
             team_id = vote_data.get('team_id')
             voter_team_id = vote_data.get('voter_team_id')  # Team that voter represents
-            
-            # Check if vote already exists
-            existing_vote = Vote.query.filter_by(
-                question_id=question_id,
-                voter_id=voter.id
-            ).first()
-            
-            if existing_vote:
-                continue  # Skip if already voted
             
             # Create vote
             vote = Vote(

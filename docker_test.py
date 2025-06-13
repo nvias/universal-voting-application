@@ -129,22 +129,38 @@ class DockerTester:
         """Setup database with sample data"""
         print("\n🗄️  Setting up database...")
         
-        # Run the database fix script
-        success, stdout, stderr = self.run_command("docker-compose exec -T voting-app python fix_database.py <<< '1\nyes'")
+        # Use the programmatic approach instead of interactive
+        success, stdout, stderr = self.run_command(
+            "docker-compose exec -T voting-app python -c \"from fix_database import run_all_setup; run_all_setup()\""
+        )
+        
         if success:
             print("  ✅ Database setup completed")
+            return True
         else:
             print(f"  ❌ Database setup failed: {stderr}")
-            # Try alternative approach
-            print("  🔄 Trying alternative setup...")
-            success, stdout, stderr = self.run_command("docker-compose exec voting-app python -c \"from fix_database import fix_database, create_sample_voting, create_nase_firmy_sample; fix_database(); create_sample_voting(); create_nase_firmy_sample()\"")
-            if success:
-                print("  ✅ Alternative database setup completed")
-            else:
-                print(f"  ❌ Alternative setup also failed: {stderr}")
-                return False
-        
-        return True
+            # Try individual steps
+            print("  🔄 Trying individual setup steps...")
+            
+            commands = [
+                "from fix_database import fix_database; fix_database()",
+                "from fix_database import create_sample_voting; create_sample_voting()",
+                "from fix_database import create_nase_firmy_sample; create_nase_firmy_sample()"
+            ]
+            
+            for i, cmd in enumerate(commands, 1):
+                print(f"    Step {i}/3...")
+                success, stdout, stderr = self.run_command(
+                    f'docker-compose exec -T voting-app python -c "{cmd}"'
+                )
+                if success:
+                    print(f"    ✅ Step {i} completed")
+                else:
+                    print(f"    ❌ Step {i} failed: {stderr}")
+                    if i == 1:  # If fix_database fails, stop
+                        return False
+            
+            return True
     
     def test_api_endpoints(self):
         """Test API endpoints"""

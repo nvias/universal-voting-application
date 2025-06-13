@@ -60,12 +60,12 @@ def create_question_template():
 @api_bp.route('/voting', methods=['POST'])
 def create_voting_session():
     """Create a new voting session from external application"""
-    data = request.get_json()
-    
-    if not data or 'name' not in data:
-        return jsonify({'error': 'Missing required field: name'}), 400
-    
     try:
+        data = request.get_json(force=True)
+        
+        if not data or 'name' not in data:
+            return jsonify({'error': 'Missing required field: name'}), 400
+        
         # Create voting session
         session = VotingSession(
             unique_id=generate_unique_id(),
@@ -349,9 +349,10 @@ def get_nase_firmy_results(voting_id):
         # Get all votes for this category
         votes = Vote.query.filter_by(question_id=question.id).all()
         
-        # Count votes for each team
+        # Count votes for each team (including self-votes)
         team_votes = {}
         voting_teams = {}  # Teams that gave votes
+        self_votes = {}  # Track self-votes separately
         
         for vote in votes:
             voted_team = Team.query.get(vote.team_id)
@@ -360,12 +361,17 @@ def get_nase_firmy_results(voting_id):
             if voted_team.name not in team_votes:
                 team_votes[voted_team.name] = {
                     'votes': 0,
-                    'voting_teams': []
+                    'voting_teams': [],
+                    'self_votes': 0
                 }
             
             team_votes[voted_team.name]['votes'] += 1
             if voter_team:
                 team_votes[voted_team.name]['voting_teams'].append(voter_team.name)
+                
+                # Track self-votes
+                if voter_team.id == voted_team.id:
+                    team_votes[voted_team.name]['self_votes'] += 1
         
         # Find team with most votes
         if team_votes:
@@ -373,13 +379,15 @@ def get_nase_firmy_results(voting_id):
             results[category] = {
                 'winning_team': winner[0],
                 'votes_received': winner[1]['votes'],
-                'voting_teams': list(set(winner[1]['voting_teams']))  # Remove duplicates
+                'voting_teams': list(set(winner[1]['voting_teams'])),  # Remove duplicates
+                'self_votes': winner[1]['self_votes']
             }
         else:
             results[category] = {
                 'winning_team': None,
                 'votes_received': 0,
-                'voting_teams': []
+                'voting_teams': [],
+                'self_votes': 0
             }
     
     return jsonify({

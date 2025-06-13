@@ -6,6 +6,7 @@ This script handles migration from old schema to new schema with proper fixes
 
 import os
 import sys
+import random
 from datetime import datetime
 
 def fix_database():
@@ -88,7 +89,7 @@ def create_default_templates():
         },
         {
             'name': 'Naše firmy',
-            'description': 'Competition voting template where teams vote for other teams in specific categories. Each team selects one team per category (MASKA, KOLA, SKELET, PLAKÁT, MARKETING).',
+            'description': 'Competition voting template where teams vote for other teams in specific categories. Each team selects one team per category (MASKA, KOLA, SKELET, PLAKAT, MARKETING).',
             'question_type': 'team_selection',
             'options': []  # Options will be the teams themselves
         }
@@ -110,10 +111,17 @@ def create_default_templates():
     
     db.session.commit()
 
+def generate_unique_id():
+    """Generate a unique 6-digit ID for voting sessions"""
+    from models import VotingSession
+    while True:
+        unique_id = str(random.randint(100000, 999999))
+        if not VotingSession.query.filter_by(unique_id=unique_id).first():
+            return unique_id
+
 def create_sample_voting():
     """Create a sample voting session for testing"""
     from models import db, VotingSession, Question, Team
-    from api_blueprint import generate_unique_id
     
     print("\n📊 Creating sample voting session...")
     
@@ -167,7 +175,6 @@ def create_sample_voting():
 def create_nase_firmy_sample():
     """Create a sample Naše firmy voting session"""
     from models import db, VotingSession, Question, Team
-    from api_blueprint import generate_unique_id
     
     print("\n🏆 Creating sample 'Naše firmy' voting session...")
     
@@ -191,55 +198,7 @@ def create_nase_firmy_sample():
         db.session.add(team)
     
     # Add Naše firmy categories
-    categories = ["MASKA", "KOLA", "SKELET", "PLAKÁT", "MARKETING"]
-    
-    for idx, category in enumerate(categories):
-        question = Question(
-            session_id=session.id,
-            text=category,
-            question_type="team_selection",
-            options=[],  # Teams will be the options
-            order_index=idx
-        )
-        db.session.add(question)
-    
-    db.session.commit()
-    
-def create_nase_firmy_sample():
-    """Create a sample Naše firmy voting session"""
-    from models import db, VotingSession, Question, Team
-    import random
-    
-    def generate_unique_id():
-        """Generate a unique 6-digit ID for voting sessions"""
-        while True:
-            unique_id = str(random.randint(100000, 999999))
-            if not VotingSession.query.filter_by(unique_id=unique_id).first():
-                return unique_id
-    
-    print("\n🏆 Creating sample 'Naše firmy' voting session...")
-    
-    # Create Naše firmy voting session
-    session = VotingSession(
-        unique_id=generate_unique_id(),
-        name="Naše firmy 2025",
-        description="Sample competition voting - teams vote for other teams in specific categories"
-    )
-    db.session.add(session)
-    db.session.flush()
-    
-    # Add sample teams
-    team_names = ["Tým Alpha", "Tým Beta", "Tým Gamma", "Tým Delta", "Tým Omega"]
-    for team_name in team_names:
-        team = Team(
-            session_id=session.id,
-            name=team_name,
-            external_id=team_name.lower().replace(" ", "_").replace("ý", "y")
-        )
-        db.session.add(team)
-    
-    # Add Naše firmy categories
-    categories = ["MASKA", "KOLA", "SKELET", "PLAKÁT", "MARKETING"]
+    categories = ["MASKA", "KOLA", "SKELET", "PLAKAT", "MARKETING"]
     
     for idx, category in enumerate(categories):
         question = Question(
@@ -254,10 +213,6 @@ def create_nase_firmy_sample():
     db.session.commit()
     
     print(f"  ✅ Naše firmy voting created with ID: {session.unique_id}")
-    print(f"  🗳️  Voting URL: /hlasovani/{session.unique_id}")
-    print(f"  📱 QR Code URL: /presentation/{session.unique_id}")
-    print(f"  📊 Categories: {', '.join(categories)}")
-    print(f"  👥 Teams: {', '.join(team_names)}")unique_id}")
     print(f"  🗳️  Voting URL: /hlasovani/{session.unique_id}")
     print(f"  📱 QR Code URL: /presentation/{session.unique_id}")
     print(f"  📊 Categories: {', '.join(categories)}")
@@ -293,6 +248,19 @@ def check_database_health():
         print(f"❌ Database health check failed: {e}")
         return False
 
+def run_all_setup():
+    """Run complete database setup - for Docker automation"""
+    print("🔧 Running complete database setup...")
+    try:
+        fix_database()
+        create_sample_voting()
+        create_nase_firmy_sample()
+        print("✅ Complete setup finished!")
+        return True
+    except Exception as e:
+        print(f"❌ Setup failed: {e}")
+        return False
+
 def main():
     """Main function with interactive options"""
     print("🗳️  Voting System Database Migration Tool")
@@ -304,9 +272,10 @@ def main():
         print("2. Check database health")
         print("3. Create sample voting sessions")
         print("4. Create sample 'Naše firmy' voting")
-        print("5. Exit")
+        print("5. Run complete setup (fix + samples)")
+        print("6. Exit")
         
-        choice = input("\nEnter your choice (1-5): ").strip()
+        choice = input("\nEnter your choice (1-6): ").strip()
         
         if choice == '1':
             confirm = input("\n⚠️  This will DELETE ALL existing data. Continue? (yes/no): ").strip().lower()
@@ -335,6 +304,9 @@ def main():
                 print("❌ Database not ready. Fix database first (option 1).")
         
         elif choice == '5':
+            run_all_setup()
+        
+        elif choice == '6':
             print("👋 Goodbye!")
             break
         

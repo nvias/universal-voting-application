@@ -1,71 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
-	<title>Login V7</title>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-
-	<!--===============================================================================================-->
-	<link rel="icon" type="image/png" href="https://colorlib.com/etc/lf/Login_v7/images/icons/favicon.ico"/>
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/vendor/bootstrap/css/bootstrap.min.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/fonts/font-awesome-4.7.0/css/font-awesome.min.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/fonts/Linearicons-Free-v1.0.0/icon-font.min.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/vendor/animate/animate.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/vendor/css-hamburgers/hamburgers.min.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/vendor/animsition/css/animsition.min.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/vendor/select2/select2.min.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/vendor/daterangepicker/daterangepicker.css">
-	<!--===============================================================================================-->
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/css/util.css">
-	<link rel="stylesheet" type="text/css" href="https://colorlib.com/etc/lf/Login_v7/css/main.css">
-	<!--===============================================================================================-->
-	<meta name="robots" content="noindex, follow">
+    <meta charset="UTF-8">
+    <title>NVIAS - Přihlášení</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <div class="container">
+        <div class="login-wrapper">
+            <div class="header">
+                <img src="https://framerusercontent.com/images/GVcZ28MwwaOnLOQe1Q1meZMF6ck.png" alt="Nvias Logo" class="logo">
+                <h1>Přihlášení do administrace</h1>
+                <p>Zadejte své přihlašovací údaje</p>
+            </div>
 
-	<div class="limiter">
-		<div class="container-login100">
-			<div class="wrap-login100 p-t-90 p-b-30">
-				<form class="login100-form validate-form" method="POST" action="/admin">
-	<div class="text-center p-t-55 p-b-30">
-		<span class="txt1">Přihlášení</span>
-	</div>
+            <div class="card">
+                <form method="POST" action="/admin" class="login-form">
+                    <div class="form-group">
+                        <label class="form-label" for="name">
+                            <i class="fas fa-user"></i>
+                            Uživatelské jméno
+                        </label>
+                        <input type="text" id="name" name="name" class="form-input" required>
+                    </div>
 
-	<div class="wrap-input100 validate-input m-b-16" data-validate="Zadejte jméno">
-		<input class="input100" type="text" name="name" placeholder="Jméno">
-		<span class="focus-input100"></span>
-	</div>
+                    <div class="form-group">
+                        <label class="form-label" for="pass">
+                            <i class="fas fa-lock"></i>
+                            Heslo
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="pass" name="pass" class="form-input" required>
+                            <button type="button" class="password-toggle" onclick="togglePassword()">
+                                <i class="fas fa-eye" id="password-icon"></i>
+                            </button>
+                        </div>
+                    </div>
 
-	<div class="wrap-input100 validate-input m-b-20" data-validate="Zadejte heslo">
-		<span class="btn-show-pass">
-			<i class="fa fa fa-eye"></i>
-		</span>
-		<input class="input100" type="password" name="pass" placeholder="Heslo">
-		<span class="focus-input100"></span>
-	</div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Přihlásit se
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-	<div class="container-login100-form-btn">
-		<button class="login100-form-btn">Přihlásit</button>
-	</div>
-</form>
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('pass');
+            const passwordIcon = document.getElementById('password-icon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                passwordIcon.className = 'fas fa-eye';
+            }
+        }
 
-					<div class="flex-col-c p-t-224">
-						
-					</div>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('name').focus();
+        });
+    </script>
 
-				</form>
-			</div>
-		</div>
-	</div>
-
-
+    <style>
+        .login-wrapper {
+            max-width: 400px;
+            margin: 0 auto;
+            padding-top: 5rem;
+        }
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .password-input {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+        }
+    </style>
 </body>
 </html>

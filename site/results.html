@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>NVIAS - Výsledky hlasování</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://framerusercontent.com/images/GVcZ28MwwaOnLOQe1Q1meZMF6ck.png" alt="Nvias Logo" class="logo">
+            <h1>Výsledky hlasování</h1>
+            <p>Analýza a vizualizace výsledků hlasovacích sesí</p>
+        </div>
+
+        <div class="card">
+            <select id="voting-select" class="form-input" onchange="loadResults()">
+                <option value="">-- Vyberte hlasování --</option>
+            </select>
+        </div>
+
+        <div id="loading" class="card" style="display: none;">
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Načítám výsledky...</p>
+            </div>
+        </div>
+
+        <div id="error" class="message message-error" style="display: none;"></div>
+
+        <div id="results-container" style="display: none;">
+            <div class="card">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-value" id="total-voters">0</div>
+                        <div class="stat-label">Voličů</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-vote-yea"></i></div>
+                        <div class="stat-value" id="total-votes">0</div>
+                        <div class="stat-label">Hlasů</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-question"></i></div>
+                        <div class="stat-value" id="total-questions">0</div>
+                        <div class="stat-label">Otázek</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                        <div class="stat-value" id="participation-rate">0%</div>
+                        <div class="stat-label">Účast</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="charts-container"></div>
+
+            <div class="card">
+                <div id="results-table"></div>
+            </div>
+
+            <div class="card">
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="exportToCSV()">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportToJSON()">
+                        <i class="fas fa-file-code"></i> Export JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="/" class="btn btn-secondary" style="position: fixed; bottom: 20px; right: 20px;">
+        <i class="fas fa-home"></i> Zpět
+    </a>
+
+    <script>
+        let currentResults = null;
+        let currentSessionData = null;
+
+        async function loadVotingList() {
+            try {
+                const response = await fetch('/get_votings');
+                const data = await response.json();
+                
+                const select = document.getElementById('voting-select');
+                const votingsArray = Object.values(data);
+                votingsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                
+                votingsArray.forEach(voting => {
+                    const option = document.createElement('option');
+                    option.value = voting.unique_id;
+                    option.textContent = `${voting.name} (${voting.ended ? 'Ukončeno' : voting.started ? 'Aktivní' : 'Nespuštěno'})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                showError('Chyba při načítání: ' + error.message);
+            }
+        }
+
+        async function loadResults() {
+            const votingId = document.getElementById('voting-select').value;
+            if (!votingId) {
+                document.getElementById('results-container').style.display = 'none';
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const sessionResponse = await fetch(`/api/v1/voting/${votingId}`);
+                currentSessionData = await sessionResponse.json();
+
+                const resultsResponse = await fetch(`/api/v1/voting/${votingId}/results`);
+                currentResults = await resultsResponse.json();
+
+                displayResults();
+                document.getElementById('results-container').style.display = 'block';
+            } catch (error) {
+                showError('Chyba při načítání výsledků: ' + error.message);
+            }
+            showLoading(false);
+        }
+
+        function displayResults() {
+            let totalVotes = 0;
+            currentResults.results.forEach(question => {
+                Object.values(question.teams).forEach(team => {
+                    totalVotes += team.vote_count || 0;
+                });
+            });
+
+            document.getElementById('total-voters').textContent = currentResults.total_voters;
+            document.getElementById('total-votes').textContent = totalVotes;
+            document.getElementById('total-questions').textContent = currentResults.results.length;
+            document.getElementById('participation-rate').textContent = 
+                Math.round((totalVotes / (currentSessionData.teams.length * currentSessionData.questions.length)) * 100) + '%';
+
+            generateCharts();
+            generateResultsTable();
+        }
+
+        function generateCharts() {
+            const container = document.getElementById('charts-container');
+            container.innerHTML = '';
+
+            currentResults.results.forEach((question, index) => {
+                const chartCard = document.createElement('div');
+                chartCard.className = 'chart-container';
+                chartCard.innerHTML = `
+                    <h3 class="chart-title">${question.question_text}</h3>
+                    <canvas id="chart-${index}"></canvas>
+                `;
+                container.appendChild(chartCard);
+
+                const ctx = document.getElementById(`chart-${index}`).getContext('2d');
+                const labels = Object.keys(question.teams);
+                const data = Object.values(question.teams).map(team => 
+                    question.question_type === 'rating' ? (team.average_rating || 0) : (team.vote_count || 0)
+                );
+
+                new Chart(ctx, {
+                    type: question.question_type === 'rating' ? 'bar' : 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: question.question_type === 'rating' ? 'Průměrné hodnocení' : 'Počet hlasů',
+                            data: data,
+                            backgroundColor: [
+                                'rgba(37, 99, 235, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(16, 185, 129, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(139, 92, 246, 0.8)',
+                                'rgba(236, 72, 153, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            });
+        }
+
+        function generateResultsTable() {
+            const container = document.getElementById('results-table');
+            let html = '<table class="results-table"><thead><tr><th>Otázka</th><th>Tým</th><th>Výsledek</th><th>Hlasů</th></tr></thead><tbody>';
+
+            currentResults.results.forEach(question => {
+                Object.entries(question.teams).forEach(([teamName, teamData]) => {
+                    const result = question.question_type === 'rating' 
+                        ? `⭐ ${teamData.average_rating || 0}`
+                        : Object.entries(teamData.option_counts || {}).map(([o, c]) => `${o}: ${c}`).join(', ') || 'Žádné hlasy';
+                    
+                    html += `<tr><td>${question.question_text}</td><td>${teamName}</td><td>${result}</td><td>${teamData.vote_count || 0}</td></tr>`;
+                });
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function exportToCSV() {
+            if (!currentResults) return;
+            let csv = 'Otazka,Tym,Vysledek,Pocet_hlasu\n';
+            currentResults.results.forEach(question => {
+                Object.entries(question.teams).forEach(([teamName, teamData]) => {
+                    const result = question.question_type === 'rating' ? (teamData.average_rating || 0) : 
+                        Object.entries(teamData.option_counts || {}).map(([o, c]) => `${o}:${c}`).join(';');
+                    csv += `"${question.question_text}","${teamName}","${result}","${teamData.vote_count || 0}"\n`;
+                });
+            });
+            downloadFile(csv, `vysledky_${currentResults.session_id}.csv`, 'text/csv');
+        }
+
+        function exportToJSON() {
+            if (!currentResults) return;
+            downloadFile(JSON.stringify(currentResults, null, 2), `vysledky_${currentResults.session_id}.json`, 'application/json');
+        }
+
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').style.display = 'block';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadVotingList);
+    </script>
+
+    <style>
+        .chart-container {
+            background: white;
+            border-radius: var(--radius-2xl);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 1.5rem;
+            position: relative;
+            height: 500px;
+        }
+        
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .results-table th,
+        .results-table td {
+            border: 1px solid var(--gray-200);
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .results-table th {
+            background: var(--gray-50);
+            font-weight: 600;
+        }
+        
+        .results-table tr:hover {
+            background: var(--primary-light);
+        }
+    </style>
+</body>
+</html>

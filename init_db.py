@@ -1,95 +1,131 @@
 #!/usr/bin/env python3
 """
-Database initialization script for the voting application
+Database initialization script for the voting application.
+Run this script to create all database tables and add sample data.
 """
 
-from server import create_app
-from models import db, QuestionTemplate
 import os
+import sys
+from datetime import datetime
 
-def create_sample_templates():
-    """Create sample question templates"""
-    templates = [
-        {
-            'name': 'Rating Scale 1-5',
-            'description': 'Rate from 1 (worst) to 5 (best)',
-            'question_type': 'rating',
-            'options': ['1', '2', '3', '4', '5']
-        },
-        {
-            'name': 'Rating Scale 1-10',
-            'description': 'Rate from 1 (worst) to 10 (best)',
-            'question_type': 'rating',
-            'options': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
-        },
-        {
-            'name': 'Yes/No Question',
-            'description': 'Simple yes or no answer',
-            'question_type': 'multiple_choice',
-            'options': ['Yes', 'No']
-        },
-        {
-            'name': 'Agree/Disagree Scale',
-            'description': 'Level of agreement',
-            'question_type': 'multiple_choice',
-            'options': ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']
-        },
-        {
-            'name': 'Quality Rating',
-            'description': 'Quality assessment',
-            'question_type': 'multiple_choice',
-            'options': ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
-        },
-        {
-            'name': 'Multiple Choice A-D',
-            'description': 'Choose one option from four choices',
-            'question_type': 'multiple_choice',
-            'options': ['Option A', 'Option B', 'Option C', 'Option D']
-        },
-        {
-            'name': 'Naše firmy',
-            'description': 'Competition voting template where teams vote for other teams in specific categories. Each team selects one team per category (MASKA, KOLA, SKELET, PLAKÁT, MARKETING).',
-            'question_type': 'team_selection',
-            'options': []  # Options will be the teams themselves
-        }
-    ]
-    
-    for template_data in templates:
-        existing = QuestionTemplate.query.filter_by(name=template_data['name']).first()
-        if not existing:
-            template = QuestionTemplate(
-                name=template_data['name'],
-                description=template_data['description'],
-                question_type=template_data['question_type'],
-                options=template_data['options']
-            )
-            db.session.add(template)
-            print(f"Created template: {template_data['name']}")
-        else:
-            print(f"Template already exists: {template_data['name']}")
+# Add the current directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def main():
-    """Initialize the database"""
-    # Set environment for database creation
-    os.environ.setdefault('FLASK_ENV', 'development')
-    
+from server import create_app
+from models import db, VotingSession, Question, Team, Vote, Voter, QuestionTemplate
+
+def init_database():
+    """Initialize the database with tables and sample data"""
     app = create_app()
     
     with app.app_context():
         print("Creating database tables...")
         db.create_all()
-        print("Database tables created successfully!")
         
-        print("\nCreating sample question templates...")
-        create_sample_templates()
+        # Create sample question templates if they don't exist
+        templates = [
+            QuestionTemplate(
+                name="Rating Scale 1-5",
+                description="Rate from 1 (worst) to 5 (best)",
+                question_type="rating",
+                options=['1', '2', '3', '4', '5']
+            ),
+            QuestionTemplate(
+                name="Yes/No Question",
+                description="Simple yes or no answer",
+                question_type="multiple_choice",
+                options=['Yes', 'No']
+            ),
+            QuestionTemplate(
+                name="Multiple Choice",
+                description="Choose one option from multiple choices",
+                question_type="multiple_choice",
+                options=['Option A', 'Option B', 'Option C', 'Option D']
+            ),
+            QuestionTemplate(
+                name="Team Selection",
+                description="Select a team (for Naše firmy competitions)",
+                question_type="team_selection",
+                options=[]
+            )
+        ]
+        
+        for template in templates:
+            existing = QuestionTemplate.query.filter_by(name=template.name).first()
+            if not existing:
+                db.session.add(template)
+                print(f"Added template: {template.name}")
+        
         db.session.commit()
-        print("Sample templates created successfully!")
+        print("Database initialized successfully!")
         
-        print("\n✅ Database initialization completed!")
-        print("\nTo start the application:")
-        print("python server.py")
-        print("\nOr with environment variables:")
-        print("FLASK_ENV=docker python server.py")
+        # Print database statistics
+        print(f"\nDatabase Statistics:")
+        print(f"Question Templates: {QuestionTemplate.query.count()}")
+        print(f"Voting Sessions: {VotingSession.query.count()}")
+        print(f"Questions: {Question.query.count()}")
+        print(f"Teams: {Team.query.count()}")
+        print(f"Voters: {Voter.query.count()}")
+        print(f"Votes: {Vote.query.count()}")
+
+def create_sample_nase_firmy_session():
+    """Create a sample 'Naše firmy' voting session for testing"""
+    app = create_app()
+    
+    with app.app_context():
+        # Check if sample session already exists
+        existing = VotingSession.query.filter_by(name="Nase firmy 2025").first()
+        if existing:
+            print("Sample 'Nase firmy 2025' session already exists!")
+            return
+        
+        print("Creating sample 'Nase firmy 2025' session...")
+        
+        # Create voting session
+        session = VotingSession(
+            unique_id="655662",
+            name="Nase firmy 2025",
+            description="Annual company competition",
+            started=True,
+            ended=False
+        )
+        db.session.add(session)
+        db.session.flush()
+        
+        # Add questions (categories)
+        categories = ['MASKA', 'KOLA', 'SKELET', 'PLAKAT', 'MARKETING']
+        for idx, category in enumerate(categories):
+            question = Question(
+                session_id=session.id,
+                text=category,
+                question_type='team_selection',
+                options=[],
+                order_index=idx
+            )
+            db.session.add(question)
+        
+        # Add teams
+        teams = ['Tym Alpha', 'Tym Beta', 'Tym Gamma', 'Tym Delta']
+        for team_name in teams:
+            team = Team(
+                session_id=session.id,
+                name=team_name
+            )
+            db.session.add(team)
+        
+        db.session.commit()
+        print("Sample session created successfully!")
+        print(f"Session ID: {session.unique_id}")
+        print(f"Voting URL: /hlasovani/{session.unique_id}")
+        print(f"QR Code URL: /presentation/{session.unique_id}")
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == '--sample':
+        create_sample_nase_firmy_session()
+    else:
+        init_database()
+        
+        # Ask if user wants to create sample data
+        response = input("\nCreate sample 'Nase firmy 2025' session? (y/N): ")
+        if response.lower() in ['y', 'yes']:
+            create_sample_nase_firmy_session()

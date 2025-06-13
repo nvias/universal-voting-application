@@ -1,0 +1,49 @@
+{
+  "name": "Nase firmy 2025",
+  "description": "Annual company competition",
+  "questions": [
+    {
+      "text": "MASKA",
+      "question_type": "team_selection",
+      "options": []
+    },
+    {
+      "text": "KOLA",
+      "question_type": "team_selection",
+      "options": []
+    },
+    {
+      "text": "SKELET",
+      "question_type": "team_selection",
+      "options": []
+    },
+    {
+      "text": "PLAKAT",
+      "question_type": "team_selection",
+      "options": []
+    },
+    {
+      "text": "MARKETING",
+      "question_type": "team_selection",
+      "options": []
+    }
+  ],
+  "teams": [
+    {
+      "name": "Tym Alpha",
+      "external_id": "alpha"
+    },
+    {
+      "name": "Tym Beta",
+      "external_id": "beta"
+    },
+    {
+      "name": "Tym Gamma",
+      "external_id": "gamma"
+    },
+    {
+      "name": "Tym Delta",
+      "external_id": "delta"
+    }
+  ]
+}
