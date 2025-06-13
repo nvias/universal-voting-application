@@ -473,4 +473,13 @@ def init_db():
     print("Database initialized successfully!")
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", debug=True)
+    # Get configuration based on environment
+    debug_mode = os.environ.get('FLASK_ENV', 'production') != 'production'
+    port = int(os.environ.get('PORT', 5000))
+    host = os.environ.get('HOST', '0.0.0.0')
+    
+    print(f"Starting NVIAS Voting System on {host}:{port}")
+    print(f"Environment: {os.environ.get('FLASK_ENV', 'production')}")
+    print(f"Debug mode: {debug_mode}")
+    
+    app.run(host=host, port=port, debug=debug_mode)

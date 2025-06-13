@@ -1,14 +1,15 @@
 # Voting System Application
 
-A modern Flask-based voting system with PostgreSQL backend, designed for team evaluations and surveys with flexible question types and comprehensive analytics.
+A modern Flask-based voting system with PostgreSQL backend, designed for team evaluations and surveys with flexible question types and comprehensive analytics. Features Traefik integration for production deployments with SSL support.
 
 ## Features
 
 ### Core Functionality
-- **Flexible Voting System**: Support for rating scales, multiple choice, yes/no questions
+- **Flexible Voting System**: Support for rating scales, multiple choice, yes/no questions, team selection
 - **Team-based Voting**: Users vote for different teams across multiple questions
-- **Real-time Results**: Comprehensive analytics and result aggregation
+- **Real-time Results**: Comprehensive analytics and result aggregation with detailed voting information
 - **Mobile-Responsive**: Works seamlessly on desktop and mobile devices
+- **Detailed Voting Tracking**: See which team voted for which team (perfect for competitions)
 
 ### API Integration
 - **RESTful API**: Complete API for external application integration
@@ -19,80 +20,134 @@ A modern Flask-based voting system with PostgreSQL backend, designed for team ev
 ### Technical Features
 - **PostgreSQL Database**: Robust data storage with complex query capabilities
 - **Docker Ready**: Complete containerization with Docker Compose
+- **Traefik Integration**: Production-ready reverse proxy with SSL certificates
 - **Environment Configuration**: Flexible configuration for different environments
 - **Database Migrations**: Version-controlled database schema changes
 
-## Quick Start with Docker
+## Quick Start
 
-### Prerequisites
-- Docker and Docker Compose installed
-- Git
+### 🚀 One-Command Deployment
 
-### 1. Clone and Start
 ```bash
+# Clone the repository
 git clone <your-repo-url>
 cd voting-app
 
-# Start the application stack
-docker-compose up -d
+# Run the deployment script (works for both local and production)
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-### 2. Initialize Database
+The deployment script will guide you through:
+1. **Local Development**: Runs on localhost:5000 with all features
+2. **Production Deployment**: Traefik integration with SSL and custom domain
+
+### 🔧 Manual Setup
+
+#### Local Development
 ```bash
-# Initialize database with sample data
+# 1. Copy environment file
+cp .env.example .env
+
+# 2. Start services
+docker-compose up -d
+
+# 3. Initialize database
+docker-compose exec voting-app python init_db.py
+
+# 4. Access application
+# Main App: http://localhost:5000
+# PgAdmin: http://localhost:8080
+```
+
+#### Production with Traefik
+```bash
+# 1. Copy production environment template
+cp .env.production .env
+
+# 2. Edit .env with your domain and settings
+nano .env
+
+# 3. Remove development override (if exists)
+mv docker-compose.override.yml docker-compose.override.yml.bak
+
+# 4. Start production services
+docker-compose up -d
+
+# 5. Initialize database
 docker-compose exec voting-app python init_db.py
 ```
 
-### 3. Access the Application
-- **Main App**: http://localhost:5000
-- **API Health Check**: http://localhost:5000/api/v1/health
-- **PgAdmin** (optional): http://localhost:8080 (admin@example.com / admin)
+## Configuration
 
-## Development Setup
+### Environment Variables (.env)
 
-### Prerequisites
-- Python 3.11+
-- PostgreSQL 15+
-- Git
-
-### 1. Setup Environment
 ```bash
-# Clone repository
-git clone <your-repo-url>
-cd voting-app
+# Project Settings
+COMPOSE_PROJECT_NAME=nvias-voting
+WEB_DOMAIN=voting.yourdomain.com
+APP_URL=https://voting.yourdomain.com
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
+# Application
+FLASK_ENV=production
+SECRET_KEY=your-very-secure-secret-key
+CORS_ORIGINS=https://voting.yourdomain.com
 
-# Install dependencies
-pip install -r requirements.txt
+# Database
+POSTGRES_DB=voting_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=secure-password
+
+# Traefik
+CERT_RESOLVER=main-resolver
+
+# Optional: PgAdmin
+PGADMIN_ENABLE=true
+PGADMIN_DOMAIN=pgadmin.yourdomain.com
 ```
 
-### 2. Configure Database
-```bash
-# Copy environment template
-cp .env.example .env
+### Docker Compose Files
 
-# Edit .env with your database credentials
-DATABASE_URL=postgresql://username:password@localhost:5432/voting_db
-SECRET_KEY=your-secret-key
+- **docker-compose.yml**: Production configuration with Traefik
+- **docker-compose.override.yml**: Local development overrides (auto-used)
+- **.env.example**: Development environment template
+- **.env.production**: Production environment template
+
+## Deployment Scenarios
+
+### 1. Local Development
+```bash
+# Uses docker-compose.override.yml automatically
+docker-compose up -d
+
+# Accessible at:
+# - Main App: http://localhost:5000
+# - PgAdmin: http://localhost:8080
 ```
 
-### 3. Initialize Database
+### 2. Production with Traefik
 ```bash
-# Create database tables and sample data
-python init_db.py
+# Remove override file for production
+mv docker-compose.override.yml docker-compose.override.yml.bak
 
-# Or use migrations (recommended for production)
-python create_migrations.py
+# Configure environment
+cp .env.production .env
+# Edit .env with your settings
+
+# Deploy
+docker-compose up -d
+
+# Accessible at your configured domain with SSL
 ```
 
-### 4. Run Application
+### 3. Standalone Production (No Traefik)
 ```bash
-python server.py
+# Modify docker-compose.yml to add port mapping:
+# ports:
+#   - "5000:5000"
+
+# Remove Traefik labels and deploy
+docker-compose up -d
 ```
 
 ## API Usage Examples
@@ -117,93 +172,169 @@ curl -X POST http://localhost:5000/api/v1/voting \
   }'
 ```
 
-### Start Voting Session
-```bash
-curl -X POST http://localhost:5000/api/v1/voting/{voting_id}/start
-```
-
-### Get Results
+### Get Detailed Results (Shows Which Team Voted for Which)
 ```bash
 curl http://localhost:5000/api/v1/voting/{voting_id}/results
 ```
+
+## Management Commands
+
+```bash
+# View logs
+docker-compose logs -f voting-app
+
+# Database shell
+docker-compose exec db psql -U postgres -d voting_db
+
+# Application shell
+docker-compose exec voting-app python
+
+# Initialize/Reset database
+docker-compose exec voting-app python init_db.py
+
+# Test application
+docker-compose exec voting-app python test_fixes.py
+
+# Stop services
+docker-compose down
+
+# Update and restart
+docker-compose pull && docker-compose up -d
+```
+
+## Special Features
+
+### "Naše firmy" Template
+Perfect for company competitions where teams vote for each other:
+
+```bash
+# Creates session with categories: MASKA, KOLA, SKELET, PLAKÁT, MARKETING
+docker-compose exec voting-app python init_db.py --sample
+```
+
+### Detailed Voting Results
+See exactly which team voted for which team:
+- Admin panel shows voting patterns
+- Export includes voter information
+- API provides detailed breakdown
+
+### Real-time Statistics
+- Live vote counting on presentation screens
+- Automatic refresh every 5 seconds
+- Manual refresh with visual feedback
 
 ## Project Structure
 
 ```
 voting-app/
-├── server.py              # Main Flask application
-├── models.py              # Database models
-├── api_blueprint.py       # API endpoints
-├── config.py              # Configuration classes
-├── init_db.py            # Database initialization
-├── create_migrations.py   # Migration helper
-├── requirements.txt       # Python dependencies
-├── Dockerfile            # Container definition
-├── docker-compose.yml    # Multi-container setup
-├── site/                 # Frontend templates
-│   ├── admin.html
-│   ├── login.html
-│   ├── voting.html
-│   └── qr.html
-├── database/             # Legacy JSON files (deprecated)
-└── migrations/           # Database migrations (auto-generated)
+├── deploy.sh                 # Deployment script
+├── docker-compose.yml        # Production Docker configuration
+├── docker-compose.override.yml # Local development overrides
+├── .env.example              # Development environment template
+├── .env.production           # Production environment template
+├── server.py                 # Main Flask application
+├── models.py                 # Database models
+├── api_blueprint.py          # API endpoints
+├── config.py                 # Configuration classes
+├── init_db.py               # Database initialization
+├── requirements.txt          # Python dependencies
+├── site/                     # Frontend templates
+│   ├── admin.html           # Admin interface
+│   ├── voting.html          # Voting interface
+│   ├── qr.html              # QR code presentation
+│   └── results.html         # Results visualization
+└── docs/                     # Documentation
+    ├── FIXES_APPLIED.md
+    ├── RESULTS_GUIDE.md
+    └── DETAILED_VOTING_GUIDE.md
 ```
 
-## Database Schema
+## Monitoring and Logs
 
-### Core Tables
-- **voting_sessions**: Main voting sessions
-- **questions**: Questions within sessions
-- **teams**: Teams being evaluated
-- **votes**: Individual votes cast
-- **voters**: Voter tracking
-- **question_templates**: Reusable question templates
+### Health Checks
+- Application: `http://your-domain/api/v1/health`
+- Database connectivity: Built-in Docker health checks
+- Traefik integration: Automatic SSL and routing
 
-### Key Relationships
-- Sessions contain multiple questions and teams
-- Votes link questions, teams, and voters
-- Flexible schema supports various question types and aggregation methods
-
-## Configuration
-
-### Environment Variables
+### Logging
 ```bash
-# Flask Configuration
-FLASK_ENV=development|production|docker
-SECRET_KEY=your-secret-key
+# View all logs
+docker-compose logs -f
 
-# Database
-DATABASE_URL=postgresql://user:pass@host:port/db
-
-# CORS (comma-separated origins)
-CORS_ORIGINS=*
+# View specific service logs
+docker-compose logs -f voting-app
+docker-compose logs -f db
 ```
 
-### Docker Environment
-The application automatically configures for Docker when `FLASK_ENV=docker`.
+## Security Features
 
-## Deployment
+### Production Security
+- Environment-based configuration
+- Secret key management
+- CORS configuration
+- SQL injection prevention (SQLAlchemy ORM)
+- Secure database connections
 
-### Production Deployment with Docker
+### SSL/TLS Support
+- Automatic SSL certificate generation via Traefik
+- HTTP to HTTPS redirection
+- Secure cookie settings in production
+
+## Performance Optimization
+
+### Database
+- Indexed foreign keys
+- Efficient query patterns
+- Connection pooling support
+- Query optimization for large datasets
+
+### Application
+- Docker multi-stage builds
+- Health checks for reliability
+- Graceful shutdown handling
+- Static file optimization
+
+## Troubleshooting
+
+### Common Issues
+
+#### Port Conflicts
 ```bash
-# Set production environment
-export FLASK_ENV=production
-export SECRET_KEY=your-very-secure-key
-export DATABASE_URL=postgresql://user:pass@prod-db:5432/voting_db
-
-# Deploy
-docker-compose -f docker-compose.yml up -d
+# Change external ports in .env or docker-compose.yml
+WEB_PORT=5001  # If port 5000 is busy
 ```
 
-### Portainer Stack Deployment
-1. Copy `docker-compose.yml` to Portainer
-2. Set environment variables in Portainer UI
-3. Deploy stack
+#### Database Connection Issues
+```bash
+# Check database logs
+docker-compose logs db
 
-### Environment-Specific Configurations
-- **Development**: SQLite fallback, debug mode, detailed logging
-- **Production**: PostgreSQL required, security headers, optimized settings
-- **Docker**: Container-optimized settings, health checks
+# Verify connection
+docker-compose exec voting-app python test_db.py
+```
+
+#### Traefik Issues
+```bash
+# Verify Traefik network exists
+docker network ls | grep traefik_proxy
+
+# Check Traefik labels
+docker-compose config
+```
+
+#### SSL Certificate Issues
+```bash
+# Check certificate resolver configuration
+# Verify domain DNS points to your server
+# Check Traefik logs for certificate generation
+```
+
+### Debug Mode
+```bash
+# Enable debug mode
+echo "FLASK_ENV=development" >> .env
+docker-compose restart voting-app
+```
 
 ## API Documentation
 
@@ -214,99 +345,21 @@ Complete API documentation is available in `API_DOCUMENTATION.md`, including:
 - Integration examples
 - Advanced SQL query examples
 
-## Security Considerations
-
-### Current Security Features
-- CORS configuration
-- SQL injection prevention (SQLAlchemy ORM)
-- Input validation
-- Error handling without information disclosure
-
-### Recommended Production Security
-- Implement API authentication (JWT/API keys)
-- Add rate limiting
-- Use HTTPS with proper certificates
-- Regular security updates
-- Database connection encryption
-- Environment variable security
-
-## Performance Optimization
-
-### Database
-- Indexed foreign keys
-- Efficient query patterns
-- Connection pooling
-- Query optimization for large datasets
-
-### Application
-- SQLAlchemy ORM optimization
-- Caching strategies for templates
-- Async capabilities for high concurrency
-
-## Monitoring and Logging
-
-### Health Checks
-- Application health endpoint: `/api/v1/health`
-- Database connectivity checks
-- Docker health checks configured
-
-### Logging
-- Structured logging for production
-- Error tracking and monitoring
-- Performance metrics collection
-
 ## Contributing
 
 ### Development Workflow
 1. Fork the repository
-2. Create feature branch
-3. Implement changes with tests
-4. Update documentation
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Make changes and test locally: `./deploy.sh` → choice 1
+4. Test production setup: `./deploy.sh` → choice 2
 5. Submit pull request
 
 ### Code Standards
 - PEP 8 compliance
 - Type hints where appropriate
 - Comprehensive docstrings
-- Unit test coverage
-
-## Troubleshooting
-
-### Common Issues
-
-#### Database Connection Errors
-```bash
-# Check database status
-docker-compose logs db
-
-# Verify connection string
-python -c "from server import create_app; app=create_app(); app.app_context().push(); from models import db; db.create_all()"
-```
-
-#### Port Conflicts
-```bash
-# Change ports in docker-compose.yml if needed
-ports:
-  - "5001:5000"  # Change external port
-```
-
-#### Permission Issues
-```bash
-# Fix file permissions
-sudo chown -R $USER:$USER .
-```
-
-### Logs and Debugging
-```bash
-# View application logs
-docker-compose logs voting-app
-
-# View database logs
-docker-compose logs db
-
-# Access container for debugging
-docker-compose exec voting-app bash
-```
+- Docker compatibility
+- Environment variable configuration
 
 ## License
 
@@ -316,20 +369,18 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For support and questions:
 1. Check the troubleshooting section
-2. Review API documentation
-3. Check Docker logs for error details
+2. Review deployment documentation
+3. Check Docker logs: `docker-compose logs`
 4. Open an issue with detailed error information
 
 ## Roadmap
 
 ### Upcoming Features
-- [ ] Real-time voting updates via WebSocket
+- [ ] WebSocket integration for real-time updates
 - [ ] Advanced analytics dashboard
-- [ ] Email notifications
-- [ ] Bulk import/export functionality
 - [ ] Multi-language support
 - [ ] Advanced authentication system
-- [ ] Audit logging
-- [ ] API rate limiting
-- [ ] Caching layer implementation
+- [ ] Kubernetes deployment support
+- [ ] Backup and restore functionality
+- [ ] Advanced caching layer
 - [ ] Mobile app API extensions
