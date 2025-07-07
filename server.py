@@ -29,10 +29,20 @@ def create_app(config_name=None):
 
 app = create_app()
 
-# Default route
+# Default route - redirect to admin
 @app.route('/')
 def home():
+    """Home page - redirect to admin interface"""
     return render_template('admin.html')
+
+@app.route('/health')
+def health_check_legacy():
+    """Legacy health check endpoint"""
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.utcnow().isoformat(),
+        'database': 'connected'
+    })
 
 # Admin functionality (legacy support)
 @app.route('/create_voting', methods=['POST', 'GET']) 

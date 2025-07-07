@@ -1,0 +1,108 @@
+# Production Docker Compose - Enhanced Database Persistence
+# Use this file for production: docker-compose -f docker-compose.yml -f docker-compose.production.yml up -d
+
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always  # Always restart instead of unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-voting_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Explicit data directory mapping with better persistence
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./backups:/backups
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Add configuration file for better performance
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    networks:
+      - local
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-voting_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Prevent accidental removal
+    labels:
+      - "com.docker.compose.project=${COMPOSE_PROJECT_NAME:-nvias-voting}"
+      - "com.docker.compose.service=db"
+      - "backup.enable=true"
+    # Resource limits to prevent OOM kills
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  voting-app:
+    build: .
+    restart: always
+    environment:
+      FLASK_ENV: ${FLASK_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-voting_db}
+      SECRET_KEY: ${SECRET_KEY:-your-production-secret-key-change-this}
+      APP_URL: ${APP_URL:-https://voting.example.com}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # Add database connection pool settings
+      SQLALCHEMY_ENGINE_OPTIONS: '{"pool_pre_ping": true, "pool_recycle": 300}'
+    networks:
+      - local
+      - proxy
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - voting_data_prod:/app/data
+      - ./backups:/app/backups
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      # HTTP
+      - "traefik.http.routers.web_${COMPOSE_PROJECT_NAME:-nvias-voting}.entrypoints=web"
+      - "traefik.http.routers.web_${COMPOSE_PROJECT_NAME:-nvias-voting}.rule=Host(`${WEB_DOMAIN:-voting.localhost}`)"
+      - "traefik.http.routers.web_${COMPOSE_PROJECT_NAME:-nvias-voting}.middlewares=web_${COMPOSE_PROJECT_NAME:-nvias-voting}_https"
+      - "traefik.http.middlewares.web_${COMPOSE_PROJECT_NAME:-nvias-voting}_https.redirectscheme.scheme=https"
+      # HTTPS
+      - "traefik.http.routers.web_${COMPOSE_PROJECT_NAME:-nvias-voting}-https.entrypoints=websecure"
+      - "traefik.http.routers.web_${COMPOSE_PROJECT_NAME:-nvias-voting}-https.rule=Host(`${WEB_DOMAIN:-voting.localhost}`)"
+      - "traefik.http.routers.web_${COMPOSE_PROJECT_NAME:-nvias-voting}-https.tls=true"
+      - "traefik.http.routers.web_${COMPOSE_PROJECT_NAME:-nvias-voting}-https.tls.certresolver=${CERT_RESOLVER:-main-resolver}"
+      - "traefik.http.services.web_${COMPOSE_PROJECT_NAME:-nvias-voting}-https.loadbalancer.server.port=5000"
+
+# Dedicated production volumes with better naming
+volumes:
+  postgres_data_prod:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}/postgres
+  voting_data_prod:
+    driver: local
+    driver_opts:
+      type: none  
+      o: bind
+      device: ${DATA_PATH:-./data}/app
+
+networks:
+  local:
+    external: false
+  proxy:
+    external: true
+    name: "traefik_proxy"

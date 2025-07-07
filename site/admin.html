@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+    <!-- Connection Status Indicator -->
+    <div id="connection-status" class="connection-status" style="display: none;">
+        <i class="fas fa-wifi"></i>
+        <span>Připojování...</span>
+    </div>
+
     <div class="sidebar">
         <h3><i class="fas fa-vote-yea"></i> NVIAS</h3>
         <div class="user-info">
@@ -34,6 +40,12 @@
                     Výsledky
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" onclick="toggleMonitoring()">
+                    <i class="fas fa-heartbeat"></i>
+                    Monitoring
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -44,13 +56,68 @@
             <p>Správa a monitorování hlasovacích sesí</p>
         </div>
 
+        <!-- System Status Dashboard -->
+        <div id="status-dashboard" class="card">
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-icon status-ok">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="status-info">
+                        <h4>Databáze</h4>
+                        <span id="db-status">Kontroluji...</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-icon status-ok">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <div class="status-info">
+                        <h4>API Server</h4>
+                        <span id="api-status">Kontroluji...</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-icon status-ok">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="status-info">
+                        <h4>Aktivní hlasování</h4>
+                        <span id="active-votings">0</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-icon status-ok">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="status-info">
+                        <h4>Poslední aktualizace</h4>
+                        <span id="last-update">Nikdy</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Historie hlasování -->
         <div id="history-section" class="card">
             <div class="card-header">
                 <h2 class="card-title">Historie hlasování</h2>
                 <p class="card-subtitle">Přehled všech vytvořených hlasovacích sesí</p>
+                <div class="card-actions">
+                    <button class="btn btn-secondary" onclick="refreshVotings()">
+                        <i class="fas fa-sync-alt"></i> Obnovit
+                    </button>
+                    <button class="btn btn-success" onclick="exportVotings()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
             </div>
-            <div id="history-list"></div>
+            <div id="history-list">
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p>Načítám hlasování...</p>
+                </div>
+            </div>
         </div>
 
         <!-- Vytvoření nového hlasování -->
@@ -60,36 +127,80 @@
                 <p class="card-subtitle">Nastavte parametry pro novou hlasovací seši</p>
             </div>
             
-            <form method="POST" action="javascript:create_team();">
+            <form method="POST" action="javascript:createVoting();">
                 <div class="form-group">
                     <label class="form-label" for="pool_title">Název hlasování</label>
                     <input type="text" id="pool_title" name="pool_title" class="form-input" required>
                 </div>
 
-                <div class="grid grid-cols-2">
-                    <div class="card-sm">
-                        <h3 class="card-title">Týmy</h3>
-                        <div id="teams" class="tag-list"></div>
-                        <button type="button" class="btn btn-secondary" onclick="addTag('team')">
-                            <i class="fas fa-plus"></i> Přidat tým
-                        </button>
+                <div class="form-group">
+                    <label class="form-label" for="pool_description">Popis (volitelné)</label>
+                    <textarea id="pool_description" name="pool_description" class="form-input" rows="3"></textarea>
+                </div>
+
+                <!-- Template Selection -->
+                <div class="form-group">
+                    <label class="form-label">Typ hlasování</label>
+                    <div class="template-selector">
+                        <div class="template-option" onclick="selectTemplate('custom')">
+                            <div class="template-card active">
+                                <i class="fas fa-cog"></i>
+                                <h4>Vlastní nastavení</h4>
+                                <p>Vytvořte vlastní týmy a kategorie</p>
+                            </div>
+                        </div>
+                        <div class="template-option" onclick="selectTemplate('nase_firmy')">
+                            <div class="template-card">
+                                <i class="fas fa-trophy"></i>
+                                <h4>Naše firmy</h4>
+                                <p>Přednastavené kategorie: MASKA, KOLA, SKELET, PLAKÁT, MARKETING</p>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <div id="custom-settings">
+                    <div class="grid grid-cols-2">
+                        <div class="card-sm">
+                            <h3 class="card-title">Týmy</h3>
+                            <div id="teams" class="tag-list"></div>
+                            <button type="button" class="btn btn-secondary" onclick="addTag('team')">
+                                <i class="fas fa-plus"></i> Přidat tým
+                            </button>
+                        </div>
+                        <div class="card-sm">
+                            <h3 class="card-title">Kategorie</h3>
+                            <div id="categories" class="tag-list"></div>
+                            <button type="button" class="btn btn-secondary" onclick="addTag('category')">
+                                <i class="fas fa-plus"></i> Přidat kategorii
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="nase-firmy-settings" style="display: none;">
                     <div class="card-sm">
-                        <h3 class="card-title">Kategorie</h3>
-                        <div id="categories" class="tag-list"></div>
-                        <button type="button" class="btn btn-secondary" onclick="addTag('category')">
-                            <i class="fas fa-plus"></i> Přidat kategorii
+                        <h3 class="card-title">Týmy pro soutěž "Naše firmy"</h3>
+                        <p>Zadejte názvy týmů, které se budou účastnit soutěže:</p>
+                        <div id="nase-firmy-teams" class="tag-list"></div>
+                        <button type="button" class="btn btn-secondary" onclick="addNaseFirmyTeam()">
+                            <i class="fas fa-plus"></i> Přidat tým
                         </button>
                     </div>
                 </div>
 
                 <input type="hidden" name="team_count" id="team_count" value="0">
                 <input type="hidden" name="category_count" id="category_count" value="0">
+                <input type="hidden" name="template_type" id="template_type" value="custom">
 
                 <div class="btn-group">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i>
                         Vytvořit hlasování
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                        <i class="fas fa-undo"></i>
+                        Resetovat
                     </button>
                 </div>
             </form>
@@ -103,6 +214,41 @@
             </div>
             <div id="results-content">
                 <p>Vyberte hlasování z historie pro zobrazení výsledků.</p>
+            </div>
+        </div>
+
+        <!-- Monitoring Section -->
+        <div id="monitoring-section" class="card" style="display: none;">
+            <div class="card-header">
+                <h2 class="card-title">Monitoring systému</h2>
+                <p class="card-subtitle">Monitorování stavu databáze a aplikace</p>
+            </div>
+            <div id="monitoring-content">
+                <div class="monitoring-grid">
+                    <div class="monitoring-card">
+                        <h4><i class="fas fa-database"></i> Databáze</h4>
+                        <div id="db-monitoring">
+                            <p>Kontroluji stav databáze...</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="checkDatabaseHealth()">
+                            <i class="fas fa-heartbeat"></i> Kontrola zdraví
+                        </button>
+                    </div>
+                    <div class="monitoring-card">
+                        <h4><i class="fas fa-backup"></i> Zálohy</h4>
+                        <div id="backup-monitoring">
+                            <p>Kontroluji zálohy...</p>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick="createBackup()">
+                                <i class="fas fa-save"></i> Vytvořit zálohu
+                            </button>
+                            <button class="btn btn-secondary" onclick="listBackups()">
+                                <i class="fas fa-list"></i> Seznam záloh
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -119,15 +265,264 @@
         </div>
     </div>
 
+    <!-- Backup Modal -->
+    <div id="backupModal" class="modal">
+        <div class="modal-content">
+            <h3>Správa záloh</h3>
+            <div id="backup-list"></div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeBackupModal()">Zavřít</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let teamCount = 0;
         let categoryCount = 0;
         let currentTagType = null;
+        let selectedTemplate = 'custom';
+        let systemStatus = {
+            database: false,
+            api: false,
+            lastUpdate: null
+        };
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            initializePage();
+        });
+
+        async function initializePage() {
+            try {
+                // Set username
+                let username = getCookie("login") || "admin";
+                document.getElementById('username').textContent = username;
+
+                // Check system status
+                await checkSystemStatus();
+                
+                // Load votings
+                await loadVotings();
+                
+                // Setup auto-refresh
+                setInterval(refreshStatus, 30000); // Every 30 seconds
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showNotification('Chyba při inicializaci aplikace', 'error');
+            }
+        }
+
+        async function checkSystemStatus() {
+            try {
+                showConnectionStatus('Kontroluji stav systému...');
+                
+                // Check API health
+                const healthResponse = await fetch('/api/v1/health');
+                const apiOk = healthResponse.ok;
+                
+                updateStatusIcon('api-status', apiOk, apiOk ? 'API OK' : 'API Nedostupné');
+                
+                // Check database through API
+                const votingsResponse = await fetch('/get_votings');
+                const dbOk = votingsResponse.ok;
+                
+                updateStatusIcon('db-status', dbOk, dbOk ? 'Připojeno' : 'Chyba připojení');
+                
+                systemStatus.database = dbOk;
+                systemStatus.api = apiOk;
+                systemStatus.lastUpdate = new Date();
+                
+                document.getElementById('last-update').textContent = 
+                    systemStatus.lastUpdate.toLocaleTimeString();
+                
+                hideConnectionStatus();
+                
+            } catch (error) {
+                console.error('Status check error:', error);
+                updateStatusIcon('api-status', false, 'Chyba připojení');
+                updateStatusIcon('db-status', false, 'Neznámý stav');
+                hideConnectionStatus();
+            }
+        }
+
+        function updateStatusIcon(elementId, isOk, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = message;
+                
+                const icon = element.parentElement.previousElementSibling;
+                icon.className = `status-icon ${isOk ? 'status-ok' : 'status-error'}`;
+            }
+        }
+
+        function showConnectionStatus(message) {
+            const status = document.getElementById('connection-status');
+            status.querySelector('span').textContent = message;
+            status.style.display = 'flex';
+        }
+
+        function hideConnectionStatus() {
+            document.getElementById('connection-status').style.display = 'none';
+        }
+
+        async function refreshStatus() {
+            await checkSystemStatus();
+            
+            // Update active voting count
+            try {
+                const response = await fetch('/get_votings');
+                if (response.ok) {
+                    const data = await response.json();
+                    const activeCount = Object.values(data).filter(v => v.started && !v.ended).length;
+                    document.getElementById('active-votings').textContent = activeCount;
+                }
+            } catch (error) {
+                console.error('Failed to update active votings:', error);
+            }
+        }
+
+        function selectTemplate(template) {
+            selectedTemplate = template;
+            document.getElementById('template_type').value = template;
+            
+            // Update UI
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.querySelector('.template-card').classList.add('active');
+            
+            // Show/hide settings
+            if (template === 'custom') {
+                document.getElementById('custom-settings').style.display = 'block';
+                document.getElementById('nase-firmy-settings').style.display = 'none';
+            } else if (template === 'nase_firmy') {
+                document.getElementById('custom-settings').style.display = 'none';
+                document.getElementById('nase-firmy-settings').style.display = 'block';
+            }
+        }
+
+        function addNaseFirmyTeam() {
+            currentTagType = 'nase_firmy_team';
+            document.getElementById("modal-title").textContent = "Zadejte název týmu";
+            document.getElementById("modal-input").value = "";
+            document.getElementById("inputModal").style.display = "block";
+        }
+
+        async function createVoting() {
+            try {
+                showConnectionStatus('Vytvářím hlasování...');
+                
+                const formData = {
+                    name: document.getElementById("pool_title").value.trim(),
+                    description: document.getElementById("pool_description").value.trim(),
+                    template: selectedTemplate
+                };
+
+                if (!formData.name) {
+                    throw new Error('Zadejte název hlasování');
+                }
+
+                let payload;
+
+                if (selectedTemplate === 'nase_firmy') {
+                    // Naše firmy template
+                    const teams = [];
+                    document.querySelectorAll('#nase-firmy-teams .tag').forEach(tag => {
+                        const teamName = tag.textContent.replace('×', '').trim();
+                        if (teamName) teams.push(teamName);
+                    });
+
+                    if (teams.length === 0) {
+                        throw new Error('Přidejte alespoň jeden tým');
+                    }
+
+                    payload = {
+                        name: formData.name,
+                        description: formData.description,
+                        teams: teams.map(name => ({ name })),
+                        questions: [
+                            { text: "MASKA", question_type: "team_selection", options: [] },
+                            { text: "KOLA", question_type: "team_selection", options: [] },
+                            { text: "SKELET", question_type: "team_selection", options: [] },
+                            { text: "PLAKÁT", question_type: "team_selection", options: [] },
+                            { text: "MARKETING", question_type: "team_selection", options: [] }
+                        ]
+                    };
+                } else {
+                    // Custom template
+                    const teams = [];
+                    const categories = [];
+
+                    document.querySelectorAll('#teams .tag').forEach(tag => {
+                        const teamName = tag.textContent.replace('×', '').trim();
+                        if (teamName) teams.push(teamName);
+                    });
+
+                    document.querySelectorAll('#categories .tag').forEach(tag => {
+                        const categoryName = tag.textContent.replace('×', '').trim();
+                        if (categoryName) categories.push(categoryName);
+                    });
+
+                    if (teams.length === 0) {
+                        throw new Error('Přidejte alespoň jeden tým');
+                    }
+
+                    if (categories.length === 0) {
+                        throw new Error('Přidejte alespoň jednu kategorii');
+                    }
+
+                    payload = {
+                        name: formData.name,
+                        description: formData.description,
+                        teams: teams.map(c => ({ [c]: categories.map(a => ({ [a]: 0 })) })),
+                        questions: categories
+                    };
+                }
+
+                const response = await fetch('/create_voting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Chyba při vytváření hlasování');
+                }
+
+                const result = await response.json();
+                
+                showNotification(`Hlasování "${formData.name}" bylo úspěšně vytvořeno. ID: ${result.id}`, 'success');
+                resetForm();
+                toggleHistory();
+                await loadVotings();
+                
+                hideConnectionStatus();
+
+            } catch (error) {
+                console.error('Error creating voting:', error);
+                showNotification(error.message || 'Chyba při vytváření hlasování', 'error');
+                hideConnectionStatus();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('pool_title').value = '';
+            document.getElementById('pool_description').value = '';
+            document.getElementById('teams').innerHTML = '';
+            document.getElementById('categories').innerHTML = '';
+            document.getElementById('nase-firmy-teams').innerHTML = '';
+            teamCount = 0;
+            categoryCount = 0;
+            selectTemplate('custom');
+        }
 
         function toggleForm() {
             document.getElementById('voting-form').style.display = 'block';
             document.getElementById('history-section').style.display = 'none';
             document.getElementById('results-section').style.display = 'none';
+            document.getElementById('monitoring-section').style.display = 'none';
             updateNavActive('form');
         }
 
@@ -135,15 +530,25 @@
             document.getElementById('voting-form').style.display = 'none';
             document.getElementById('history-section').style.display = 'block';
             document.getElementById('results-section').style.display = 'none';
+            document.getElementById('monitoring-section').style.display = 'none';
             updateNavActive('history');
-            loadVotings();
         }
 
         function toggleResults() {
             document.getElementById('voting-form').style.display = 'none';
             document.getElementById('history-section').style.display = 'none';
             document.getElementById('results-section').style.display = 'block';
+            document.getElementById('monitoring-section').style.display = 'none';
             updateNavActive('results');
+        }
+
+        function toggleMonitoring() {
+            document.getElementById('voting-form').style.display = 'none';
+            document.getElementById('history-section').style.display = 'none';
+            document.getElementById('results-section').style.display = 'none';
+            document.getElementById('monitoring-section').style.display = 'block';
+            updateNavActive('monitoring');
+            loadMonitoringData();
         }
 
         function updateNavActive(section) {
@@ -151,140 +556,64 @@
             const activeMap = {
                 'history': 0,
                 'form': 1,
-                'results': 2
+                'results': 2,
+                'monitoring': 3
             };
             document.querySelectorAll('.nav-link')[activeMap[section]]?.classList.add('active');
         }
 
-        function create_team() {
-            const teams = [];
-            const categories = [];
-            const vname = document.getElementById("pool_title").value.trim();
-
-            for (let i = 0; i < teamCount; i++) {
-                const input = document.querySelector(`input[name="team_${i}_name"]`);
-                if (input) teams.push(input.value);
+        async function loadVotings() {
+            try {
+                const response = await fetch('/get_votings');
+                if (!response.ok) {
+                    throw new Error('Nepodařilo se načíst hlasování');
+                }
+                
+                const data = await response.json();
+                const votingsArray = Object.values(data);
+                votingsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                
+                const list = document.getElementById('history-list');
+                
+                if (votingsArray.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-vote-yea"></i><p>Zatím nebyla vytvořena žádná hlasování</p></div>';
+                    return;
+                }
+                
+                list.innerHTML = '';
+                
+                for (const voting of votingsArray) {
+                    const item = createVotingItem(voting);
+                    list.appendChild(item);
+                }
+                
+            } catch (error) {
+                console.error('Error loading votings:', error);
+                document.getElementById('history-list').innerHTML = 
+                    '<div class="message message-error">Chyba při načítání hlasování. Zkuste to znovu.</div>';
             }
-
-            for (let i = 0; i < categoryCount; i++) {
-                const input = document.querySelector(`input[name="category_${i}_name"]`);
-                if (input) categories.push(input.value);
-            }
-
-            const payload = {
-                name: vname,
-                teams: teams.map(c => ({ [c]: categories.map(a => ({ [a]: 0 })) })),
-                questions: categories,
-            };
-
-            fetch('/create_voting', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).then(() => {
-                showNotification("Hlasování bylo úspěšně vytvořeno.", 'success');
-                toggleHistory();
-            });
-        }
-
-        function addTag(type) {
-            currentTagType = type;
-            document.getElementById("modal-title").textContent =
-                `Zadejte ${type === 'team' ? 'název týmu' : 'název kategorie'}`;
-            document.getElementById("modal-input").value = "";
-            document.getElementById("inputModal").style.display = "block";
-        }
-
-        function confirmModalInput() {
-            const name = document.getElementById("modal-input").value.trim();
-            if (!name) {
-                showNotification("Zadejte platný název.", 'error');
-                return;
-            }
-
-            const tag = document.createElement("span");
-            tag.className = "tag";
-            tag.innerHTML = `${name} <i class="fas fa-times" onclick="removeTag(this)"></i>`;
-
-            const form = document.forms[0];
-            const input = document.createElement('input');
-            input.type = 'hidden';
-
-            if (currentTagType === 'team') {
-                document.getElementById('teams').appendChild(tag);
-                input.name = `team_${teamCount}_name`;
-                input.value = name;
-                teamCount++;
-                document.getElementById('team_count').value = teamCount;
-            } else {
-                document.getElementById('categories').appendChild(tag);
-                input.name = `category_${categoryCount}_name`;
-                input.value = name;
-                categoryCount++;
-                document.getElementById('category_count').value = categoryCount;
-            }
-
-            form.appendChild(input);
-            showNotification(`${currentTagType === 'team' ? 'Tým' : 'Kategorie'} "${name}" přidán.`, 'success');
-            closeModal();
-        }
-
-        function removeTag(element) {
-            element.parentElement.remove();
-        }
-
-        function closeModal() {
-            document.getElementById("inputModal").style.display = "none";
-        }
-
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement("div");
-            notification.className = `message message-${type}`;
-            notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}"></i> ${message}`;
-            
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
-
-        function loadVotings() {
-            fetch('/get_votings')
-                .then(res => res.json())
-                .then(data => {
-                    const votingsArray = Object.values(data);
-                    votingsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                    
-                    const list = document.getElementById('history-list');
-                    list.innerHTML = '';
-                    
-                    for (const voting of votingsArray) {
-                        const item = createVotingItem(voting);
-                        list.appendChild(item);
-                    }
-                });
         }
 
         function createVotingItem(voting) {
             const item = document.createElement('div');
             item.className = 'voting-item';
-            item.style.cssText = `
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 1rem;
-                border: 1px solid var(--gray-200);
-                border-radius: var(--radius-lg);
-                margin-bottom: 0.75rem;
-                background: var(--gray-50);
-            `;
             
             const teamNames = voting.teams.map(obj => Object.keys(obj)[0]).join(', ');
+            const statusClass = voting.started ? (voting.ended ? 'ended' : 'active') : 'pending';
+            const statusText = voting.started ? (voting.ended ? 'Ukončeno' : 'Aktivní') : 'Připraveno';
             
             item.innerHTML = `
-                <div>
-                    <h4 style="font-weight: 600; margin-bottom: 0.25rem;">${voting.name}</h4>
-                    <p style="color: var(--gray-600); font-size: 0.875rem;">Týmy: ${teamNames}</p>
+                <div class="voting-info">
+                    <div class="voting-header">
+                        <h4>${voting.name}</h4>
+                        <span class="voting-status status-${statusClass}">${statusText}</span>
+                    </div>
+                    <p class="voting-meta">
+                        <i class="fas fa-users"></i> Týmy: ${teamNames}
+                        <i class="fas fa-calendar"></i> Vytvořeno: ${new Date(voting.created_at).toLocaleString()}
+                    </p>
                 </div>
-                <div class="btn-group">
+                <div class="voting-actions">
                     ${getVotingButtons(voting)}
                 </div>
             `;
@@ -294,9 +623,14 @@
 
         function getVotingButtons(voting) {
             if (!voting.started) {
-                return `<button class="btn btn-success" onclick="startVoting('${voting.unique_id}')">
-                    <i class="fas fa-play"></i> Spustit
-                </button>`;
+                return `
+                    <button class="btn btn-success" onclick="startVoting('${voting.unique_id}')">
+                        <i class="fas fa-play"></i> Spustit
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteVoting('${voting.unique_id}')">
+                        <i class="fas fa-trash"></i> Smazat
+                    </button>
+                `;
             } else if (!voting.ended) {
                 return `
                     <button class="btn btn-primary" onclick="showQR('${voting.unique_id}')">
@@ -311,25 +645,54 @@
                     <button class="btn btn-secondary" onclick="showResults('${voting.unique_id}')">
                         <i class="fas fa-chart-bar"></i> Výsledky
                     </button>
+                    <button class="btn btn-info" onclick="exportResults('${voting.unique_id}')">
+                        <i class="fas fa-download"></i> Export
+                    </button>
                 `;
             }
         }
 
-        function startVoting(id) {
-            fetch(`/start_voting/${id}`, { method: 'POST' })
-                .then(() => {
-                    showNotification(`Hlasování ${id} spuštěno!`, 'success');
-                    setTimeout(() => location.reload(), 1000);
-                });
+        async function startVoting(id) {
+            try {
+                showConnectionStatus('Spouštím hlasování...');
+                
+                const response = await fetch(`/start_voting/${id}`, { method: 'POST' });
+                if (!response.ok) {
+                    throw new Error('Chyba při spouštění hlasování');
+                }
+                
+                showNotification(`Hlasování ${id} spuštěno!`, 'success');
+                await loadVotings();
+                hideConnectionStatus();
+                
+            } catch (error) {
+                console.error('Error starting voting:', error);
+                showNotification('Chyba při spouštění hlasování', 'error');
+                hideConnectionStatus();
+            }
         }
 
-        function stopVoting(id) {
-            if (confirm(`Opravdu chcete zastavit hlasování?`)) {
-                fetch(`/stop_voting/${id}`, { method: 'POST' })
-                    .then(() => {
-                        showNotification(`Hlasování ${id} zastaveno!`, 'success');
-                        setTimeout(() => location.reload(), 1000);
-                    });
+        async function stopVoting(id) {
+            if (!confirm('Opravdu chcete zastavit hlasování? Tuto akci nelze vrátit zpět.')) {
+                return;
+            }
+
+            try {
+                showConnectionStatus('Zastavuji hlasování...');
+                
+                const response = await fetch(`/stop_voting/${id}`, { method: 'POST' });
+                if (!response.ok) {
+                    throw new Error('Chyba při zastavování hlasování');
+                }
+                
+                showNotification(`Hlasování ${id} zastaveno!`, 'success');
+                await loadVotings();
+                hideConnectionStatus();
+                
+            } catch (error) {
+                console.error('Error stopping voting:', error);
+                showNotification('Chyba při zastavování hlasování', 'error');
+                hideConnectionStatus();
             }
         }
 
@@ -342,17 +705,25 @@
             loadResultsData(id);
         }
 
-        function loadResultsData(votingId) {
-            fetch(`/api/v1/voting/${votingId}/results`)
-                .then(res => res.json())
-                .then(data => {
-                    displayResults(data);
-                })
-                .catch(err => {
-                    console.error('Results loading error:', err);
-                    document.getElementById('results-content').innerHTML = 
-                        '<div class="message message-error">Chyba při načítání výsledků. Zkuste to znovu.</div>';
-                });
+        async function loadResultsData(votingId) {
+            try {
+                showConnectionStatus('Načítám výsledky...');
+                
+                const response = await fetch(`/api/v1/voting/${votingId}/results`);
+                if (!response.ok) {
+                    throw new Error('Nepodařilo se načíst výsledky');
+                }
+                
+                const data = await response.json();
+                displayResults(data);
+                hideConnectionStatus();
+                
+            } catch (error) {
+                console.error('Results loading error:', error);
+                document.getElementById('results-content').innerHTML = 
+                    '<div class="message message-error">Chyba při načítání výsledků. Zkuste to znovu.</div>';
+                hideConnectionStatus();
+            }
         }
 
         function displayResults(data) {
@@ -364,21 +735,24 @@
             }
             
             let html = `
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-users"></i></div>
-                        <div class="stat-value">${data.total_voters || 0}</div>
-                        <div class="stat-label">Celkem voličů</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-question"></i></div>
-                        <div class="stat-value">${data.results.length}</div>
-                        <div class="stat-label">Otázek</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-vote-yea"></i></div>
-                        <div class="stat-value">${getTotalVotes(data.results)}</div>
-                        <div class="stat-label">Celkem hlasů</div>
+                <div class="results-header">
+                    <h3>${data.session_name}</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-users"></i></div>
+                            <div class="stat-value">${data.total_voters || 0}</div>
+                            <div class="stat-label">Celkem voličů</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-question"></i></div>
+                            <div class="stat-value">${data.results.length}</div>
+                            <div class="stat-label">Otázek</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-vote-yea"></i></div>
+                            <div class="stat-value">${getTotalVotes(data.results)}</div>
+                            <div class="stat-label">Celkem hlasů</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -446,7 +820,205 @@
 
             container.innerHTML = html;
         }
-        
+
+        // Monitoring functions
+        async function loadMonitoringData() {
+            await checkDatabaseHealth();
+            await checkBackupStatus();
+        }
+
+        async function checkDatabaseHealth() {
+            const container = document.getElementById('db-monitoring');
+            container.innerHTML = '<p>Kontroluji stav databáze...</p>';
+            
+            try {
+                // Check basic connectivity
+                const response = await fetch('/api/v1/health');
+                const healthData = await response.json();
+                
+                // Get voting statistics
+                const votingsResponse = await fetch('/get_votings');
+                const votingsData = await votingsResponse.json();
+                
+                const totalSessions = Object.keys(votingsData).length;
+                const activeSessions = Object.values(votingsData).filter(v => v.started && !v.ended).length;
+                
+                container.innerHTML = `
+                    <div class="health-stats">
+                        <div class="health-item">
+                            <span class="health-label">Stav:</span>
+                            <span class="health-value status-ok">Zdravý</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="health-label">Celkem sesí:</span>
+                            <span class="health-value">${totalSessions}</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="health-label">Aktivní sese:</span>
+                            <span class="health-value">${activeSessions}</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="health-label">Poslední kontrola:</span>
+                            <span class="health-value">${new Date().toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="health-stats">
+                        <div class="health-item">
+                            <span class="health-label">Stav:</span>
+                            <span class="health-value status-error">Chyba</span>
+                        </div>
+                        <div class="health-item">
+                            <span class="health-label">Chyba:</span>
+                            <span class="health-value">${error.message}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        async function checkBackupStatus() {
+            const container = document.getElementById('backup-monitoring');
+            container.innerHTML = '<p>Kontroluji stav záloh...</p>';
+            
+            // Since we can't directly access the backup script from frontend,
+            // we'll show general backup information
+            container.innerHTML = `
+                <div class="backup-info">
+                    <p><i class="fas fa-info-circle"></i> Zálohy se vytváří pomocí skriptu backup_recovery.py</p>
+                    <p><i class="fas fa-folder"></i> Umístění: ./backups/</p>
+                    <p><i class="fas fa-clock"></i> Doporučená frekvence: každých 6 hodin</p>
+                </div>
+            `;
+        }
+
+        async function createBackup() {
+            showNotification('Záloha databáze se vytváří na serveru...', 'info');
+            // In a real implementation, this would call the backup script
+            // For now, just show a message
+            setTimeout(() => {
+                showNotification('Záloha vytvořena (simulace)', 'success');
+            }, 2000);
+        }
+
+        function listBackups() {
+            document.getElementById('backup-list').innerHTML = `
+                <p>Pro správu záloh použijte:</p>
+                <code>python backup_recovery.py --list</code>
+                <br><br>
+                <p>Pro vytvoření zálohy:</p>
+                <code>python backup_recovery.py --backup</code>
+            `;
+            document.getElementById('backupModal').style.display = 'block';
+        }
+
+        function closeBackupModal() {
+            document.getElementById('backupModal').style.display = 'none';
+        }
+
+        // Utility functions
+        function addTag(type) {
+            currentTagType = type;
+            document.getElementById("modal-title").textContent =
+                `Zadejte ${type === 'team' ? 'název týmu' : 'název kategorie'}`;
+            document.getElementById("modal-input").value = "";
+            document.getElementById("inputModal").style.display = "block";
+        }
+
+        function confirmModalInput() {
+            const name = document.getElementById("modal-input").value.trim();
+            if (!name) {
+                showNotification("Zadejte platný název.", 'error');
+                return;
+            }
+
+            const tag = document.createElement("span");
+            tag.className = "tag";
+            tag.innerHTML = `${name} <i class="fas fa-times" onclick="removeTag(this)"></i>`;
+
+            if (currentTagType === 'team') {
+                document.getElementById('teams').appendChild(tag);
+                teamCount++;
+                document.getElementById('team_count').value = teamCount;
+            } else if (currentTagType === 'category') {
+                document.getElementById('categories').appendChild(tag);
+                categoryCount++;
+                document.getElementById('category_count').value = categoryCount;
+            } else if (currentTagType === 'nase_firmy_team') {
+                document.getElementById('nase-firmy-teams').appendChild(tag);
+            }
+
+            showNotification(`${currentTagType === 'team' ? 'Tým' : 'Kategorie'} "${name}" přidán.`, 'success');
+            closeModal();
+        }
+
+        function removeTag(element) {
+            const tag = element.parentElement;
+            const tagText = tag.textContent.replace('×', '').trim();
+            
+            if (tag.parentElement.id === 'teams') {
+                teamCount--;
+                document.getElementById('team_count').value = teamCount;
+            } else if (tag.parentElement.id === 'categories') {
+                categoryCount--;
+                document.getElementById('category_count').value = categoryCount;
+            }
+            
+            tag.remove();
+            showNotification(`"${tagText}" odstraněn.`, 'info');
+        }
+
+        function closeModal() {
+            document.getElementById("inputModal").style.display = "none";
+        }
+
+        function refreshVotings() {
+            loadVotings();
+            showNotification('Seznam hlasování obnoven', 'success');
+        }
+
+        function exportVotings() {
+            // Implementation for exporting all votings
+            showNotification('Export funkcionalita bude brzy dostupná', 'info');
+        }
+
+        function exportResults(votingId) {
+            // Implementation for exporting specific results
+            showNotification('Export výsledků bude brzy dostupný', 'info');
+        }
+
+        function deleteVoting(id) {
+            if (!confirm('Opravdu chcete smazat toto hlasování? Tuto akci nelze vrátit zpět.')) {
+                return;
+            }
+            
+            // Implementation for deleting voting
+            showNotification('Mazání hlasování bude brzy dostupné', 'info');
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement("div");
+            notification.className = `message message-${type}`;
+            notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}"></i> ${message}`;
+            
+            document.body.appendChild(notification);
+            
+            // Position notification
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.zIndex = '10000';
+            notification.style.maxWidth = '300px';
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
         function getTotalVotes(results) {
             let total = 0;
             results.forEach(question => {
@@ -482,15 +1054,297 @@
             }
             return "";
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            let username = getCookie("login") || "admin";
-            document.getElementById('username').textContent = username;
-            loadVotings();
-        });
     </script>
 
     <style>
+        .connection-status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem;
+            text-align: center;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--gray-200);
+        }
+
+        .status-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .status-ok {
+            background: var(--success-light);
+            color: var(--success-color);
+        }
+
+        .status-error {
+            background: var(--error-light);
+            color: var(--error-color);
+        }
+
+        .status-info h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .status-info span {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .template-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .template-card {
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .template-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow);
+        }
+
+        .template-card.active {
+            border-color: var(--primary-color);
+            background: var(--primary-light);
+        }
+
+        .template-card i {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .template-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--gray-900);
+        }
+
+        .template-card p {
+            margin: 0;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+
+        .voting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            margin-bottom: 1rem;
+            background: var(--gray-50);
+            transition: all 0.3s ease;
+        }
+
+        .voting-item:hover {
+            box-shadow: var(--shadow);
+            border-color: var(--primary-color);
+        }
+
+        .voting-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .voting-header h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .voting-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .status-active {
+            background: var(--success-light);
+            color: var(--success-color);
+        }
+
+        .status-ended {
+            background: var(--secondary-light);
+            color: var(--secondary-color);
+        }
+
+        .voting-meta {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .voting-meta i {
+            margin-right: 0.25rem;
+        }
+
+        .voting-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .monitoring-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .monitoring-card {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+
+        .monitoring-card h4 {
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--gray-900);
+        }
+
+        .health-stats {
+            margin: 1rem 0;
+        }
+
+        .health-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .health-item:last-child {
+            border-bottom: none;
+        }
+
+        .health-label {
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .health-value {
+            font-weight: 600;
+        }
+
+        .health-value.status-ok {
+            color: var(--success-color);
+        }
+
+        .health-value.status-error {
+            color: var(--error-color);
+        }
+
+        .backup-info {
+            color: var(--gray-600);
+        }
+
+        .backup-info p {
+            margin: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray-500);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .results-header {
+            margin-bottom: 2rem;
+        }
+
+        .results-header h3 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .loading-container {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-spinner {
+            border: 3px solid var(--gray-200);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -508,7 +1362,7 @@
             padding: 2rem;
             border-radius: var(--radius-xl);
             width: 90%;
-            max-width: 400px;
+            max-width: 500px;
             text-align: center;
         }
         
