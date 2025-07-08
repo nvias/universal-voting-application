@@ -64,7 +64,7 @@ def test_database_connection():
     print("Testing database connection...")
     
     try:
-        from test_db import test_database_connection
+        from tests.test_db import test_database_connection
         if test_database_connection():
             print("✓ Database connection test passed")
             return True

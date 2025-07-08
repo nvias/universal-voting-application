@@ -1,7 +1,7 @@
 -- Initial database setup for voting application
 -- This script runs when the PostgreSQL container starts for the first time
 
--- Create database if it doesn't exist (optional, as it's created by POSTGRES_DB)
+-- The database is created by the POSTGRES_DB environment variable in docker-compose.
 CREATE DATABASE voting_db;
 
 -- Create extension for UUID generation (optional)

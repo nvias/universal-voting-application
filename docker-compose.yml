@@ -22,8 +22,9 @@ services:
       retries: 5
 
   voting-app:
-    build: .
+    image: "ghcr.io/nvias/universal-voting-application:bd63fb6553988f3434df585c62f587ad9758165e"
     restart: unless-stopped
+    entrypoint: ["/app/entrypoint.sh"]
     environment:
       FLASK_ENV: ${FLASK_ENV:-production}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-voting_db}
@@ -37,6 +38,7 @@ services:
       db:
         condition: service_healthy
     volumes:
+      - ./entrypoint.sh:/app/entrypoint.sh
       - ./logs:/app/logs
       - voting_data:/app/data
     labels:
