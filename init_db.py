@@ -120,12 +120,10 @@ def create_sample_nase_firmy_session():
         print(f"QR Code URL: /presentation/{session.unique_id}")
 
 if __name__ == '__main__':
+    # The script is now non-interactive.
+    # To create the sample session, run from your host machine:
+    # docker-compose exec voting-app python init_db.py --sample
     if len(sys.argv) > 1 and sys.argv[1] == '--sample':
         create_sample_nase_firmy_session()
     else:
         init_database()
-        
-        # Ask if user wants to create sample data
-        response = input("\nCreate sample 'Nase firmy 2025' session? (y/N): ")
-        if response.lower() in ['y', 'yes']:
-            create_sample_nase_firmy_session()

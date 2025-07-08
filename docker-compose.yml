@@ -24,7 +24,7 @@ services:
   voting-app:
     image: "ghcr.io/nvias/universal-voting-application:bd63fb6553988f3434df585c62f587ad9758165e"
     restart: unless-stopped
-    entrypoint: ["/app/entrypoint.sh"]
+    command: ["sh", "-c", "python init_db.py && gunicorn --bind 0.0.0.0:5000 --workers 4 'server:create_app()'"]
     environment:
       FLASK_ENV: ${FLASK_ENV:-production}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-voting_db}
@@ -38,7 +38,6 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./entrypoint.sh:/app/entrypoint.sh
       - ./logs:/app/logs
       - voting_data:/app/data
     labels:
